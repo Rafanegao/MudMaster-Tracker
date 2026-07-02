@@ -1,7 +1,19 @@
-const CACHE_NAME = 'mudmaster-cache-v1';
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./tracker_operativo.html'])));
+const CACHE_NAME = "mudmaster-tracker-v3";
+
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
 });
-self.addEventListener('fetch', e => {
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => caches.delete(cacheName))
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
 });
