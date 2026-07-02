@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tracker Operativo - Flota en Tiempo Real</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MudMaster">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#7DCD00">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<style>
+  :root{
+    --brand:#7DCD00;
+    --brand-dark:#5da300;
+    --bg:#0f1a12;
+    --panel:#132417;
+    --border:#234a26;
+    --text:#e8f5e0;
+    --muted:#8fae86;
+    --vh: 1vh;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Segoe UI', Arial, sans-serif; overflow:hidden; height:100%; }
+  #app.layout { display:flex; flex-direction:column; height:calc(var(--vh, 1vh) * 100); width:100%; }
+  .topbar { flex:0 0 auto; background:var(--panel); border-bottom:2px solid var(--border); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .topbar h1 { font-size:15px; margin:0; color:var(--brand); white-space:nowrap; }
+  #mainRow { flex:1 1 auto; display:flex; min-height:0; overflow:hidden; }
+  #sidebar { width:340px; flex:0 0 340px; background:var(--panel); padding:12px; overflow-y:auto; border-right:2px solid var(--border); -webkit-overflow-scrolling: touch; }
+  #map { flex:1 1 auto; position:relative; min-width:0; min-height:0; }
+
+  h2 { font-size:14px; margin:6px 0 10px; color:var(--brand); border-bottom:1px solid var(--border); padding-bottom:6px; letter-spacing:.3px;}
+  label { font-size:12px; color:var(--muted); display:block; margin-top:8px; }
+  input, select, button, textarea { width:100%; margin-top:4px; padding:9px; border-radius:6px; border:1px solid var(--border); background:#0f1a12; color:var(--text); font-size:13px; -webkit-appearance:none; }
+  button { cursor:pointer; font-weight:700; transition:.2s; touch-action:manipulation; }
+  #btnStart { background:var(--brand); border:none; color:#0f1a12; }
+  #btnStart:hover:not(:disabled) { background:#8fe019; }
+  #btnStart:disabled { background:#2a3a26; color:#5c6e56; cursor:not-allowed; }
+  #btnEnd { background:#c0392b; border:none; }
+  #btnEnd:hover:not(:disabled) { background:#d9483a; }
+  #btnEnd:disabled { background:#2a3a26; color:#5c6e56; cursor:not-allowed; }
+  #btnApoyo { background:#e67e22; border:none; margin-top:12px;}
+  #btnApoyo:hover { background:#f39c12; }
+  #btnAdminToggle { background:transparent; border:1px solid var(--brand); color:var(--brand); margin-top:0; width:auto; padding:8px 12px; font-size:12px; flex-shrink:0; }
+  #btnAdminToggle:hover { background:var(--brand); color:#0f1a12; }
+  .dash { background:#0f1a12; border:1px solid var(--border); border-radius:8px; padding:8px; margin-top:10px; }
+  .dash-row { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; border-bottom:1px dashed var(--border); }
+  .dash-row span:first-child { color:var(--muted); }
+  .dash-row span:last-child { font-weight:700; color:var(--brand); }
+  #historyList { max-height:110px; overflow-y:auto; font-size:11px; margin-top:6px; }
+  .hist-item { padding:5px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  .hist-item a { color:var(--brand); font-size:10px; cursor:pointer; }
+  #status { font-size:11px; padding:6px; border-radius:6px; text-align:center; margin-top:8px; }
+  .status-live { background:#7dcd0033; color:var(--brand); }
+  .status-off { background:#c0392b33; color:#e57373; }
+  .small { font-size:10px; color:var(--muted); }
+  .badge { display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; background:var(--brand); color:#0f1a12; font-weight:700; margin-left:6px; }
+  #adminPanel { display:none; border:1px dashed var(--brand); border-radius:8px; padding:10px; margin-top:10px; background:#0f1a12; }
+  #adminPanel.open { display:block; }
+
+  .live-badge {
+    background: rgba(10,20,12,0.92) !important;
+    border: 1px solid var(--brand) !important;
+    border-radius: 10px !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    padding: 6px 9px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.5) !important;
+    line-height: 1.4;
+    min-width: 90px;
+  }
+  .live-badge b { color: var(--brand); }
+
+  /* --- Tareas debajo del panel izquierdo --- */
+  #tasksSection { margin-top:14px; border-top:1px solid var(--border); padding-top:10px; }
+  .task-item { background:#0f1a12; border:1px solid var(--border); border-radius:8px; padding:8px; margin-bottom:8px; font-size:12px; }
+  .task-item.done { opacity:.5; text-decoration:line-through; }
+  .task-item .task-meta { font-size:10px; color:var(--muted); margin-top:4px; }
+  .task-prio-alta { border-left:4px solid #e74c3c; }
+  .task-prio-media { border-left:4px solid #f1c40f; }
+  .task-prio-baja { border-left:4px solid var(--brand); }
+  #btnAddTask { background:var(--brand); border:none; color:#0f1a12; margin-top:6px; }
+
+  #fleetLegend { position:absolute; bottom:10px; left:10px; background:rgba(10,20,12,0.88); border:1px solid var(--border); border-radius:8px; padding:8px; font-size:11px; z-index:500; max-width:180px; }
+  #fleetLegend h3 { margin:0 0 6px; font-size:11px; color:var(--brand); }
+  .legend-row { display:flex; align-items:center; gap:6px; margin-top:3px; }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+  /* --- Toggle móvil: alternar entre panel y mapa --- */
+  #mobileTabs { display:none; }
+  .gps-warning { display:none; background:#c0392b33; color:#ffb3a7; font-size:11px; padding:8px; border-radius:6px; margin-top:8px; text-align:center; }
+
+  @media (max-width: 820px) {
+    .topbar h1 { font-size:13px; }
+    #mobileTabs { display:flex; gap:6px; padding:8px; background:var(--panel); border-bottom:1px solid var(--border); flex:0 0 auto; }
+    #mobileTabs button { padding:9px; font-size:12px; background:#0f1a12; border:1px solid var(--border); color:var(--text); border-radius:6px; width:auto; flex:1; margin:0; }
+    #mobileTabs button.active { background:var(--brand); color:#0f1a12; border-color:var(--brand); }
+    #mainRow { flex-direction:column; }
+    #sidebar { width:100%; flex:1 1 auto; border-right:none; display:none; }
+    #sidebar.show { display:block; }
+    #map { flex:1 1 auto; display:none; }
+    #map.show { display:block; }
+    #btnAdminToggle { font-size:11px; padding:6px 8px; }
+    .topbar h1 { white-space:normal; }
+  }
+</style>
+</head>
+<body>
+<div id="app" class="layout">
+  <div class="topbar">
+    <h1>🟢 Tracker Operativo <span class="badge">MudMaster</span></h1>
+    <button id="btnAdminToggle">⚙ Admin</button>
+  </div>
+
+  <div id="mobileTabs">
+    <button id="tabPanel" class="active">📋 Panel y Tareas</button>
+    <button id="tabMap">🗺 Mapa</button>
+  </div>
+
+  <div id="mainRow">
+    <div id="sidebar" class="show">
+
+      <div id="adminPanel">
+        <h2>Panel Administrador</h2>
+        <div class="small">Configure aquí las capas y la imagen georreferenciada ANTES de que el operador inicie su turno.</div>
+        <label>Cargar líneas de plan (KML)</label>
+        <input type="file" id="kmlInput" accept=".kml">
+        <label>Cargar imagen georreferenciada (TIF/GeoTIFF)</label>
+        <input type="file" id="tifInput" accept=".tif,.tiff">
+        <label><input type="checkbox" id="drawBahias" style="width:auto; margin-right:6px;">Dibujar bahías de operación</label>
+        <button id="btnLimpiarCapas" style="background:#c0392b; border:none; margin-top:10px;">Limpiar capas guardadas</button>
+        <label style="margin-top:10px;">Google Maps API Key (opcional)</label>
+        <input id="gmapsKey" placeholder="Pega tu API Key aquí">
+        <button id="btnApplyKey" style="background:var(--brand); color:#0f1a12; border:none; margin-top:6px;">Aplicar mapa Google</button>
+      </div>
+
+      <h2>Datos del Turno</h2>
+      <label>Nombre del Operador</label>
+      <input id="operador" placeholder="Ej: Juan Perez">
+      <label>MudMaster</label>
+      <input id="maquina" placeholder="Ej: MudMaster 05">
+
+      <h2>Control de Jornada</h2>
+      <button id="btnStart">▶ Iniciar Día</button>
+      <button id="btnEnd" disabled>■ Finalizar Día (Generar KML)</button>
+      <div id="status" class="status-off">Jornada no iniciada</div>
+      <div id="gpsWarning" class="gps-warning">⚠ GPS no disponible. En iPhone: active Ajustes → Privacidad → Localización → Safari → "Mientras se usa la app", y asegúrese de abrir este archivo con HTTPS o desde Safari (no en modo Archivos/preview).</div>
+
+      <div class="dash">
+        <div class="dash-row"><span>Velocidad actual</span><span id="dSpeed">0 km/h</span></div>
+        <div class="dash-row"><span>MudMaster activo</span><span id="dMaquina">-</span></div>
+        <div class="dash-row"><span>Operador</span><span id="dOperador">-</span></div>
+        <div class="dash-row"><span>Tiempo transcurrido</span><span id="dTiempo">00:00:00</span></div>
+        <div class="dash-row"><span>Distancia recorrida</span><span id="dDist">0.0 km</span></div>
+        <div class="dash-row"><span>Puntos GPS</span><span id="dPuntos">0</span></div>
+      </div>
+
+      <h2>Solicitud de Apoyo</h2>
+      <button id="btnApoyo">🚧 Reportar Solicitud de Apoyo</button>
+
+      <h2>Historial / Base de Datos</h2>
+      <div id="historyList"></div>
+
+      <!-- TAREAS AHORA DEBAJO DEL PANEL IZQUIERDO -->
+      <div id="tasksSection">
+        <h2>Tareas Operativas</h2>
+        <div class="small">El administrador define tareas del día (ej: toma de veleta de corte).</div>
+        <div id="adminTaskForm" style="display:none; margin-top:8px;">
+          <label>Nueva tarea</label>
+          <input id="taskText" placeholder="Ej: Toma de veleta de corte">
+          <label>Prioridad</label>
+          <select id="taskPrio">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Media</option>
+            <option value="baja">Baja</option>
+          </select>
+          <button id="btnAddTask">+ Agregar tarea</button>
+        </div>
+        <div id="taskList" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div id="map">
+      <div id="fleetLegend">
+        <h3>Flota en mapa</h3>
+        <div id="legendBody" class="small">Sin máquinas activas aún.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://unpkg.com/@mapbox/togeojson@0.16.0/togeojson.js"></script>
+<script src="https://unpkg.com/georaster"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.0/dist/Leaflet.GoogleMutant.js"></script>
+
+<script>
+// ---------- FIX VIEWPORT HEIGHT PARA iOS SAFARI ----------
+function setRealVH(){
+  document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+}
+setRealVH();
+window.addEventListener('resize', setRealVH);
+window.addEventListener('orientationchange', ()=> setTimeout(setRealVH, 300));
+
+// ---------- TABS MOVIL: alternar panel / mapa ----------
+const sidebarEl = document.getElementById('sidebar');
+const mapEl = document.getElementById('map');
+const tabPanel = document.getElementById('tabPanel');
+const tabMap = document.getElementById('tabMap');
+function showPanel(){
+  sidebarEl.classList.add('show'); mapEl.classList.remove('show');
+  tabPanel.classList.add('active'); tabMap.classList.remove('active');
+}
+function showMap(){
+  mapEl.classList.add('show'); sidebarEl.classList.remove('show');
+  tabMap.classList.add('active'); tabPanel.classList.remove('active');
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 150);
+}
+tabPanel.addEventListener('click', showPanel);
+tabMap.addEventListener('click', showMap);
+
+// En desktop mostrar ambos; función para detectar
+function applyResponsiveDefaults(){
+  if(window.innerWidth <= 820){
+    showPanel();
+  } else {
+    sidebarEl.classList.add('show');
+    mapEl.classList.add('show');
+  }
+}
+applyResponsiveDefaults();
+window.addEventListener('resize', applyResponsiveDefaults);
+
+// ---------- MAPA BASE ----------
+const map = L.map('map', { zoomControl: true, tap: true }).setView([-33.45, -70.65], 13);
+let baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+}).addTo(map);
+setTimeout(()=> map.invalidateSize(), 300);
+
+function loadGoogleMaps(apiKey){
+  if(!apiKey) return;
+  const script = document.createElement('script');
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=onGoogleMapsLoaded`;
+  script.async = true;
+  document.head.appendChild(script);
+}
+window.onGoogleMapsLoaded = function(){
+  map.removeLayer(baseLayer);
+  baseLayer = L.gridLayer.googleMutant({ type: 'hybrid' }).addTo(map);
+  localStorage.setItem('gmapsKey', document.getElementById('gmapsKey').value.trim());
+  alert('Mapa de Google Maps activado.');
+};
+document.getElementById('btnApplyKey').addEventListener('click', ()=>{
+  const key = document.getElementById('gmapsKey').value.trim();
+  if(!key){ alert('Ingrese una API Key válida de Google Maps.'); return; }
+  loadGoogleMaps(key);
+});
+const savedKey = localStorage.getItem('gmapsKey');
+if(savedKey){ document.getElementById('gmapsKey').value = savedKey; loadGoogleMaps(savedKey); }
+
+const drawnItems = new L.FeatureGroup().addTo(map);
+let drawControl = null;
+
+const adminPanel = document.getElementById('adminPanel');
+const adminTaskForm = document.getElementById('adminTaskForm');
+document.getElementById('btnAdminToggle').addEventListener('click', ()=>{
+  adminPanel.classList.toggle('open');
+  adminTaskForm.style.display = adminTaskForm.style.display === 'none' ? 'block' : 'none';
+  showPanel();
+});
+
+document.getElementById('drawBahias').addEventListener('change', e=>{
+  if(e.target.checked){
+    drawControl = new L.Control.Draw({
+      draw:{ polygon:true, polyline:false, marker:false, circle:false, rectangle:true },
+      edit:{ featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+  } else if(drawControl){
+    map.removeControl(drawControl);
+  }
+});
+map.on(L.Draw.Event.CREATED, e=>{
+  drawnItems.addLayer(e.layer);
+  const bahias = JSON.parse(localStorage.getItem('bahias')||'[]');
+  bahias.push(e.layer.toGeoJSON());
+  localStorage.setItem('bahias', JSON.stringify(bahias));
+});
+
+function loadSavedBahias(){
+  const bahias = JSON.parse(localStorage.getItem('bahias')||'[]');
+  bahias.forEach(g=> L.geoJSON(g, {style:{color:'#7DCD00', weight:2, fillOpacity:.15}}).addTo(map));
+}
+
+document.getElementById('kmlInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    localStorage.setItem('planKML', evt.target.result);
+    renderPlanKML(evt.target.result);
+    alert('Líneas de plan guardadas.');
+  };
+  reader.readAsText(file);
+});
+
+function renderPlanKML(kmlText){
+  const kmlDom = new DOMParser().parseFromString(kmlText, 'text/xml');
+  const geojson = toGeoJSON.kml(kmlDom);
+  L.geoJSON(geojson, { style:{color:'#f1c40f', weight:3, dashArray:'6,4'} }).addTo(map);
+}
+
+document.getElementById('tifInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    const buffer = evt.target.result;
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i=0;i<bytes.byteLength;i++) binary += String.fromCharCode(bytes[i]);
+    localStorage.setItem('planTIF', btoa(binary));
+    renderTIF(buffer);
+    alert('Imagen georreferenciada guardada.');
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function renderTIF(buffer){
+  parseGeoraster(buffer).then(georaster=>{
+    const layer = new GeoRasterLayer({ georaster, opacity:0.7, resolution:256 });
+    layer.addTo(map);
+    map.fitBounds(layer.getBounds());
+  }).catch(err=>console.error('Error al leer GeoTIFF:', err));
+}
+
+function loadSavedLayers(){
+  const kml = localStorage.getItem('planKML');
+  if(kml) renderPlanKML(kml);
+  const tifB64 = localStorage.getItem('planTIF');
+  if(tifB64){
+    const binary = atob(tifB64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+    renderTIF(bytes.buffer);
+  }
+  loadSavedBahias();
+}
+loadSavedLayers();
+
+document.getElementById('btnLimpiarCapas').addEventListener('click', ()=>{
+  if(confirm('¿Eliminar todas las capas guardadas (KML, TIF, bahías)?')){
+    localStorage.removeItem('planKML');
+    localStorage.removeItem('planTIF');
+    localStorage.removeItem('bahias');
+    location.reload();
+  }
+});
+
+const palette = ['#7DCD00','#4fc3f7','#f1c40f','#e67e22','#e74c3c','#9b59b6','#1abc9c','#ff69b4','#00bcd4','#a3e635'];
+function colorForMachine(name){
+  let hash = 0;
+  for(let i=0;i<name.length;i++){ hash = (hash*31 + name.charCodeAt(i)) % palette.length; }
+  return palette[Math.abs(hash) % palette.length];
+}
+
+const fleetLayers = {};
+function fleetKey(m){ return 'fleet_track_' + m; }
+
+function upsertFleetLayer(machine, points, operador, live){
+  if(!points || points.length===0) return;
+  const color = colorForMachine(machine);
+  const latlngs = points.map(p=>[p.lat, p.lon]);
+  if(!fleetLayers[machine]){
+    const pl = L.polyline(latlngs, {color, weight: live?4:3, opacity: live?1:0.6}).addTo(map);
+    const last = points[points.length-1];
+    const mk = L.marker(latlngs[latlngs.length-1], {
+      icon: L.divIcon({className:'', html:`<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.6)"></div>`, iconSize:[14,14]})
+    }).addTo(map);
+    mk.bindTooltip(buildBadge(machine, operador, last), {permanent:true, direction:'top', offset:[0,-10], className:'live-badge'});
+    fleetLayers[machine] = {polyline:pl, marker:mk, color};
+  } else {
+    fleetLayers[machine].polyline.setLatLngs(latlngs);
+    fleetLayers[machine].marker.setLatLng(latlngs[latlngs.length-1]);
+    const last = points[points.length-1];
+    fleetLayers[machine].marker.setTooltipContent(buildBadge(machine, operador, last));
+  }
+  renderLegend();
+}
+
+function buildBadge(machine, operador, last){
+  return `<b>${machine}</b><br>${operador||''}<br>${(last.speed||0)} km/h`;
+}
+
+function renderLegend(){
+  const el = document.getElementById('legendBody');
+  const names = Object.keys(fleetLayers);
+  if(names.length===0){ el.innerHTML = 'Sin máquinas activas aún.'; return; }
+  el.innerHTML = names.map(n=>
+    `<div class="legend-row"><span class="legend-dot" style="background:${fleetLayers[n].color}"></span>${n}</div>`
+  ).join('');
+}
+
+function loadAllFleetTracks(){
+  Object.keys(localStorage).filter(k=>k.startsWith('fleet_track_')).forEach(k=>{
+    const machine = k.replace('fleet_track_','');
+    try{
+      const data = JSON.parse(localStorage.getItem(k));
+      if(data && data.points) upsertFleetLayer(machine, data.points, data.operador, false);
+    }catch(e){}
+  });
+}
+loadAllFleetTracks();
+
+window.addEventListener('storage', (e)=>{
+  if(e.key && e.key.startsWith('fleet_track_')){
+    const machine = e.key.replace('fleet_track_','');
+    try{
+      const data = JSON.parse(e.newValue);
+      if(data && data.points) upsertFleetLayer(machine, data.points, data.operador, machine === currentMachine);
+    }catch(err){}
+  }
+});
+
+let watchId = null;
+let trackPoints = [];
+let ownMarker = null;
+let polyline = null;
+let startTime = null;
+let timerInterval = null;
+let lastLatLng = null;
+let totalDist = 0;
+let jornadaActiva = false;
+let currentMachine = null;
+
+function fmtTime(sec){
+  const h = String(Math.floor(sec/3600)).padStart(2,'0');
+  const m = String(Math.floor((sec%3600)/60)).padStart(2,'0');
+  const s = String(Math.floor(sec%60)).padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
+
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  if(jornadaActiva) return;
+  const operador = document.getElementById('operador').value.trim();
+  const maquina = document.getElementById('maquina').value.trim();
+  if(!operador || !maquina){ alert('Ingrese operador y MudMaster antes de iniciar.'); return; }
+  if(!navigator.geolocation){
+    document.getElementById('gpsWarning').style.display = 'block';
+    alert('Este dispositivo no soporta geolocalización.');
+    return;
+  }
+
+  jornadaActiva = true;
+  currentMachine = maquina;
+  trackPoints = []; totalDist = 0; lastLatLng = null;
+  startTime = Date.now();
+  document.getElementById('dOperador').textContent = operador;
+  document.getElementById('dMaquina').textContent = maquina;
+  document.getElementById('status').textContent = 'Jornada en curso - GPS activo';
+  document.getElementById('status').className = 'status-live';
+  document.getElementById('gpsWarning').style.display = 'none';
+
+  const btnStart = document.getElementById('btnStart');
+  btnStart.disabled = true;
+  btnStart.textContent = '🔒 Jornada en curso';
+  document.getElementById('btnEnd').disabled = false;
+  document.getElementById('operador').disabled = true;
+  document.getElementById('maquina').disabled = true;
+
+  const ownColor = colorForMachine(maquina);
+  if(polyline) map.removeLayer(polyline);
+  if(ownMarker) map.removeLayer(ownMarker);
+  polyline = L.polyline([], {color: ownColor, weight:5, opacity:1}).addTo(map);
+  ownMarker = L.marker([-33.45,-70.65], {
+    icon: L.divIcon({className:'', html:`<div style="background:${ownColor};width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.7)"></div>`, iconSize:[16,16]})
+  }).addTo(map);
+  ownMarker.bindTooltip('', {permanent:true, direction:'top', offset:[0,-12], className:'live-badge'});
+
+  timerInterval = setInterval(()=>{
+    document.getElementById('dTiempo').textContent = fmtTime((Date.now()-startTime)/1000);
+  }, 1000);
+
+  navigator.geolocation.getCurrentPosition(()=>{}, err=>{
+    document.getElementById('gpsWarning').style.display = 'block';
+  }, {enableHighAccuracy:true, timeout:8000});
+
+  watchId = navigator.geolocation.watchPosition(pos=>{
+    const {latitude, longitude, speed} = pos.coords;
+    const ll = [latitude, longitude];
+    const kmh = speed ? (speed*3.6) : (lastLatLng ? estimateSpeed(lastLatLng, ll) : 0);
+
+    if(lastLatLng){ totalDist += map.distance(lastLatLng, ll)/1000; }
+    lastLatLng = ll;
+
+    trackPoints.push({lat:latitude, lon:longitude, ts:new Date().toISOString(), speed:kmh.toFixed(1), maquina, operador});
+
+    ownMarker.setLatLng(ll);
+    polyline.addLatLng(ll);
+    map.panTo(ll);
+
+    const elapsed = fmtTime((Date.now()-startTime)/1000);
+    ownMarker.setTooltipContent(`<b>${maquina}</b><br>${operador}<br>${kmh.toFixed(1)} km/h · ${totalDist.toFixed(1)} km<br>${elapsed}`);
+
+    document.getElementById('dSpeed').textContent = kmh.toFixed(1)+' km/h';
+    document.getElementById('dDist').textContent = totalDist.toFixed(2)+' km';
+    document.getElementById('dPuntos').textContent = trackPoints.length;
+
+    localStorage.setItem(fleetKey(maquina), JSON.stringify({operador, points: trackPoints}));
+    upsertFleetLayer(maquina, trackPoints, operador, true);
+  }, err=>{
+    document.getElementById('gpsWarning').style.display = 'block';
+    alert('Error GPS: '+err.message+'\n\nEn iPhone: revise Ajustes > Privacidad y Seguridad > Localización > Safari, y permita "Mientras se usa la app".');
+  }, {enableHighAccuracy:true, maximumAge:1000, timeout:15000});
+});
+
+let prevTs = null;
+function estimateSpeed(a,b){
+  const dist = map.distance(a,b);
+  const now = Date.now();
+  const dt = prevTs ? (now-prevTs)/1000 : 1;
+  prevTs = now;
+  return dt>0 ? (dist/dt)*3.6 : 0;
+}
+
+document.getElementById('btnEnd').addEventListener('click', ()=>{
+  if(watchId!==null) navigator.geolocation.clearWatch(watchId);
+  clearInterval(timerInterval);
+  jornadaActiva = false;
+
+  document.getElementById('status').textContent = 'Jornada finalizada';
+  document.getElementById('status').className = 'status-off';
+
+  const btnStart = document.getElementById('btnStart');
+  btnStart.disabled = false;
+  btnStart.textContent = '▶ Iniciar Día';
+  document.getElementById('btnEnd').disabled = true;
+  document.getElementById('operador').disabled = false;
+  document.getElementById('maquina').disabled = false;
+
+  const kml = buildKML(trackPoints);
+  const record = {
+    id: Date.now(),
+    fecha: new Date().toISOString().slice(0,19),
+    operador: document.getElementById('operador').value,
+    maquina: document.getElementById('maquina').value,
+    puntos: trackPoints.length,
+    distancia: totalDist.toFixed(2),
+    kml
+  };
+  const db = JSON.parse(localStorage.getItem('trackerDB')||'[]');
+  db.push(record);
+  localStorage.setItem('trackerDB', JSON.stringify(db));
+  downloadFile(`recorrido_${record.maquina}_${record.fecha}.kml`, kml);
+  renderHistory();
+});
+
+function buildKML(points){
+  const coords = points.map(p=>`${p.lon},${p.lat},0`).join(' ');
+  const placemarks = points.map(p=>
+    `<Placemark><name>${p.ts}</name><description>Velocidad: ${p.speed} km/h | MudMaster: ${p.maquina}</description>
+    <Point><coordinates>${p.lon},${p.lat},0</coordinates></Point></Placemark>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<name>Recorrido Operativo</name>
+<Style id="lineStyle"><LineStyle><color>ff00cd7d</color><width>4</width></LineStyle></Style>
+<Placemark>
+  <name>Traza del día</name>
+  <styleUrl>#lineStyle</styleUrl>
+  <LineString><tessellate>1</tessellate><coordinates>${coords}</coordinates></LineString>
+</Placemark>
+${placemarks}
+</Document>
+</kml>`;
+}
+
+function downloadFile(filename, content){
+  const blob = new Blob([content], {type:'application/vnd.google-earth.kml+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function renderHistory(){
+  const db = JSON.parse(localStorage.getItem('trackerDB')||'[]');
+  const el = document.getElementById('historyList');
+  el.innerHTML = db.slice().reverse().map(r=>
+    `<div class="hist-item"><span>${r.fecha} - ${r.maquina} (${r.distancia} km)</span>
+     <a onclick='downloadFile("recorrido_${r.maquina}_${r.fecha}.kml", ${JSON.stringify(r.kml)})'>Descargar KML</a></div>`
+  ).join('') || '<div class="small">Sin registros aún.</div>';
+}
+renderHistory();
+
+document.getElementById('btnApoyo').addEventListener('click', ()=>{
+  const motivo = prompt('Describa la solicitud de apoyo (ej: falla mecánica, combustible, atraso):');
+  if(!motivo) return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const req = {
+      ts: new Date().toISOString(),
+      operador: document.getElementById('operador').value || 'N/A',
+      maquina: document.getElementById('maquina').value || 'N/A',
+      lat: pos.coords.latitude, lon: pos.coords.longitude,
+      motivo
+    };
+    const reqs = JSON.parse(localStorage.getItem('apoyoReq')||'[]');
+    reqs.push(req);
+    localStorage.setItem('apoyoReq', JSON.stringify(reqs));
+    L.marker([req.lat, req.lon], {title:'Solicitud de apoyo'})
+      .addTo(map).bindPopup(`⚠ Apoyo: ${motivo}`).openPopup();
+    alert('Solicitud de apoyo registrada y georreferenciada.');
+  }, err=> alert('No se pudo obtener ubicación: '+err.message));
+});
+
+function loadTasks(){ return JSON.parse(localStorage.getItem('tasks')||'[]'); }
+function saveTasks(t){ localStorage.setItem('tasks', JSON.stringify(t)); }
+
+function renderTasks(){
+  const tasks = loadTasks();
+  const el = document.getElementById('taskList');
+  if(tasks.length===0){ el.innerHTML = '<div class="small">Sin tareas asignadas.</div>'; return; }
+  el.innerHTML = tasks.map((t,i)=>
+    `<div class="task-item task-prio-${t.prio} ${t.done?'done':''}">
+      <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+        <input type="checkbox" style="width:auto; margin:2px 0 0 0;" ${t.done?'checked':''} onchange="toggleTask(${i})">
+        <span>${t.text}</span>
+      </label>
+      <div class="task-meta">Prioridad: ${t.prio} · ${t.fecha}</div>
+    </div>`
+  ).join('');
+}
+function toggleTask(i){
+  const tasks = loadTasks();
+  tasks[i].done = !tasks[i].done;
+  saveTasks(tasks);
+  renderTasks();
+}
+document.getElementById('btnAddTask').addEventListener('click', ()=>{
+  const text = document.getElementById('taskText').value.trim();
+  const prio = document.getElementById('taskPrio').value;
+  if(!text) return;
+  const tasks = loadTasks();
+  tasks.push({text, prio, done:false, fecha:new Date().toLocaleString()});
+  saveTasks(tasks);
+  document.getElementById('taskText').value='';
+  renderTasks();
+});
+renderTasks();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW error', err));
+  });
+}
+</script>
+</body>
+</html>
