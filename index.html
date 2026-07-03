@@ -211,7 +211,17 @@ function renderLayerControls(data){
 function layerControlHtml(id,type,name,updatedAt){
   const checked=isLayerVisible(id)?'checked':'';
   const del=fb.admin ? `<button onclick="deleteSharedLayer('${id}')">Eliminar</button>` : '';
-  return `<div class="layer-control-item"><label><input type="checkbox" ${checked} onchange="toggleSharedLayer('${id}', this.checked)"><span><b>${type}</b> ${name}<br><small>${updatedAt||''}</small></span></label>${del}</div>`;
+  const zoom=`<button onclick="zoomToSharedLayer('${id}')" style="border-color:var(--brand);color:var(--brand);">Zoom</button>`;
+  return `<div class="layer-control-item"><label><input type="checkbox" ${checked} onchange="toggleSharedLayer('${id}', this.checked)"><span><b>${type}</b> ${name}<br><small>${updatedAt||''}</small></span></label>${zoom}${del}</div>`;
+}
+function zoomToSharedLayer(id){
+  const lyr=sharedKmlLayers[id] || sharedTifLayers[id];
+  if(!lyr){
+    if(sharedLayerData.tifs && sharedLayerData.tifs[id]){ renderSharedTIF(id, sharedLayerData.tifs[id]).then(()=>setTimeout(()=>zoomToSharedLayer(id),500)); return; }
+    if(sharedLayerData.kmls && sharedLayerData.kmls[id]){ renderSharedKML(id, sharedLayerData.kmls[id]); setTimeout(()=>zoomToSharedLayer(id),300); return; }
+    alert('La capa aún no está cargada. Active la capa primero.'); return;
+  }
+  try{ map.fitBounds(lyr.getBounds(), {padding:[20,20]}); showMap(); }catch(e){ alert('No se pudo hacer zoom a la capa: '+e.message); }
 }
 async function deleteSharedLayer(id){
   if(!fb.admin){alert('Debe entrar como admin.');return;}
@@ -265,15 +275,50 @@ async function renderSharedTIF(id, layerData){
     const buffer=await resp.arrayBuffer();
     const georaster=await parseGeoraster(buffer);
     console.log('GeoTIFF cargado', layerData.name||id, georaster);
-    if(!georaster || !georaster.xmin || !georaster.ymin) throw new Error('El TIF no parece tener georreferenciación válida.');
-    const layer=new GeoRasterLayer({georaster,opacity:.72,resolution:256});
+    if(!georaster || georaster.xmin===undefined || georaster.ymin===undefined) throw new Error('El TIF no parece tener georreferenciación válida.');
+
+    // Algunos GeoTIFF PSAD56 llegan con proyección numérica. Forzamos formato compatible con proj4.
+    if(georaster.projection===24877 || georaster.projection==='24877') georaster.projection='EPSG:24877';
+    if(georaster.projection===24878 || georaster.projection==='24878') georaster.projection='EPSG:24878';
+    if(georaster.projection===32717 || georaster.projection==='32717') georaster.projection='EPSG:32717';
+    if(georaster.projection===32718 || georaster.projection==='32718') georaster.projection='EPSG:32718';
+
+    const noData = georaster.noDataValue;
+    const mins = georaster.mins || [];
+    const ranges = georaster.ranges || [];
+    function clampByte(v){ v=Number(v); if(!isFinite(v)) return 0; return Math.max(0, Math.min(255, Math.round(v))); }
+    function pixelValuesToColorFn(values){
+      if(!values || !values.length) return null;
+      if(values.some(v=>v===undefined || v===null || Number.isNaN(v))) return null;
+      if(noData!==undefined && noData!==null && values.some(v=>Number(v)===Number(noData))) return null;
+      // RGB/RGBA GeoTIFF
+      if(values.length>=3){
+        const r=clampByte(values[0]), g=clampByte(values[1]), b=clampByte(values[2]);
+        const a=values.length>=4 ? Math.max(0, Math.min(1, Number(values[3])/255)) : 0.78;
+        return `rgba(${r},${g},${b},${a})`;
+      }
+      // GeoTIFF de una banda: normaliza a escala de grises para que siempre sea visible.
+      const v=Number(values[0]);
+      const min=Number(mins[0] ?? 0);
+      const range=Number(ranges[0] ?? 1) || 1;
+      const gray=clampByte(((v-min)/range)*255);
+      return `rgba(${gray},${gray},${gray},0.78)`;
+    }
+
+    const layer=new GeoRasterLayer({
+      georaster,
+      opacity:.85,
+      resolution:128,
+      proj4: window.proj4,
+      pixelValuesToColorFn
+    });
     layer.addTo(map);
     sharedTifLayers[id]=layer;
-    try{ if(Object.keys(sharedKmlLayers).length + Object.keys(sharedTifLayers).length === 1) map.fitBounds(layer.getBounds()); }catch(e){}
-    showLayerError('', false);
+    try{ map.fitBounds(layer.getBounds(), {padding:[20,20]}); }catch(e){ console.warn('No se pudo ajustar zoom al TIF',e); }
+    showLayerError(`TIF cargado: ${layerData.name||id}. Proyección detectada: ${georaster.projection||'sin dato'}.`, false);
   }catch(e){
     console.error('Error TIF compartido',e);
-    showLayerError(`Error TIF ${layerData.name||id}: ${e.message}. Revise que el GeoTIFF tenga proyección/georreferencia, no sea demasiado pesado y que Storage permita lectura.`);
+    showLayerError(`Error TIF ${layerData.name||id}: ${e.message}. Recomendado: reproyectar en QGIS a EPSG:4326 o EPSG:3857, recortar el área y volver a subir.`);
   }
 }
 function showLayerError(msg, isError=true){
@@ -308,7 +353,7 @@ document.getElementById('btnUploadTif').onclick=async()=>{
       const id=layerId('tif', file.name);
       const path='sharedLayers/tifs/'+id+'_'+file.name;
       const ref=fb.storage.ref(path);
-      await ref.put(file, {contentType:file.type || 'image/tiff'});
+      await ref.put(file, {contentType:'image/tiff'});
       const url=await ref.getDownloadURL();
       await fb.db.ref('sharedLayers/tifs/'+id).set({name:file.name,path,url,updatedAt:isoLocal(new Date()),updatedBy:fb.auth.currentUser.email||fb.auth.currentUser.uid,size:file.size});
     }
@@ -351,6 +396,8 @@ document.getElementById('btnApoyo').onclick=()=>{const motivo=prompt('Describa l
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW error',err)));}
 </script>
 </body>
+</html>
+
 </html>
 
 
