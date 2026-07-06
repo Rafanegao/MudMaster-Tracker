@@ -43,7 +43,15 @@ input[type="checkbox"]{appearance:auto!important;-webkit-appearance:checkbox!imp
   .line-label{background:rgba(10,20,12,.92);border:1px solid var(--brand);color:var(--brand);border-radius:9px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;}
   .line-label.done1{border-color:#7DCD00;color:#7DCD00}.line-label.done2{border-color:#4fc3f7;color:#4fc3f7}.line-label.done3{border-color:#9b59b6;color:#d9b3ff}
 
-  @media(max-width:820px){.topbar h1{font-size:13px;white-space:normal}#mobileTabs{display:flex;gap:6px;padding:8px;background:var(--panel);border-bottom:1px solid var(--border);flex:0 0 auto}#mobileTabs button{padding:9px;font-size:12px;background:#0f1a12;border:1px solid var(--border);color:var(--text);border-radius:6px;width:auto;flex:1;margin:0}#mobileTabs button.active{background:var(--brand);color:#0f1a12;border-color:var(--brand)}#mainRow{flex-direction:column}#sidebar{width:100%;flex:1 1 auto;border-right:none;display:none}#sidebar.show{display:block}#map{flex:1 1 auto;display:none}#map.show{display:block}.admin-actions{grid-template-columns:1fr}.btn-outline{font-size:11px;padding:6px 8px}.login-row{display:block}#adminRightPanel{width:100%;flex:1 1 auto;border-left:none;display:none}#adminRightPanel.open{display:block}}
+  
+#topAlertBanner{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:1200;min-width:320px;max-width:70vw;background:rgba(230,126,34,.96);color:#111;border:2px solid #ffd08a;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.45);display:none;text-align:center;}
+#topAlertBanner.show{display:block;}
+.settings-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-top:7px;font-size:12px;color:var(--muted);}
+.settings-row input,.settings-row select{margin:0;}
+.critical-layer{border-color:#7DCD00!important;box-shadow:0 0 0 1px rgba(125,205,0,.25) inset;}
+.result-card{border:1px solid var(--border);border-radius:8px;padding:8px;background:#0f1a12;margin-top:8px;}
+
+@media(max-width:820px){.topbar h1{font-size:13px;white-space:normal}#mobileTabs{display:flex;gap:6px;padding:8px;background:var(--panel);border-bottom:1px solid var(--border);flex:0 0 auto}#mobileTabs button{padding:9px;font-size:12px;background:#0f1a12;border:1px solid var(--border);color:var(--text);border-radius:6px;width:auto;flex:1;margin:0}#mobileTabs button.active{background:var(--brand);color:#0f1a12;border-color:var(--brand)}#mainRow{flex-direction:column}#sidebar{width:100%;flex:1 1 auto;border-right:none;display:none}#sidebar.show{display:block}#map{flex:1 1 auto;display:none}#map.show{display:block}.admin-actions{grid-template-columns:1fr}.btn-outline{font-size:11px;padding:6px 8px}.login-row{display:block}#adminRightPanel{width:100%;flex:1 1 auto;border-left:none;display:none}#adminRightPanel.open{display:block}}
 
 .pass-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}.pass-table th,.pass-table td{border-bottom:1px solid var(--border);padding:4px;text-align:left}.pass-ok{color:var(--brand);font-weight:700}.pass-mid{color:#f6b26b;font-weight:700}.pass-zero{color:#ffb3a7}.admin-map-note{padding:6px;border:1px dashed var(--brand);border-radius:8px;margin-top:6px;background:#0f1a12;color:var(--muted);font-size:10px}
 
@@ -63,10 +71,17 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 .param-label{background:rgba(10,20,12,.94);border:1px solid #ff6d00;color:#ffb380;border-radius:9px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;}
 
 /* --- Organización modular admin / notificaciones / clima / Shear Vane --- */
-.admin-module-tabs{display:none;gap:10px;align-items:center;justify-content:center;flex:1;max-width:780px;}
+.admin-module-tabs{display:none;gap:4px;align-items:center;justify-content:center;flex:1;max-width:900px;overflow-x:auto;padding:0 3px;}
 .admin-module-tabs.visible{display:flex;}
-.admin-module-tabs button{width:auto;margin:0;padding:12px 22px;border-radius:0;border:0;background:#ff5a00;color:#111;font-weight:900;font-size:12px;min-width:104px;}
+.admin-module-tabs button{width:auto;margin:0;padding:5px 7px;border-radius:5px;border:0;background:#ff5a00;color:#111;font-weight:900;font-size:9px;min-width:54px;white-space:nowrap;line-height:1.05;}
 .admin-module-tabs button.active{background:#7DCD00;color:#0f1a12;box-shadow:0 0 0 2px rgba(125,205,0,.35) inset;}
+.admin-module-tabs button.settings-tab{background:#2f4150;color:#d6f4ff;border:1px solid #5f8fa5;}
+.admin-module-tabs button.settings-tab.active{background:#5f8fa5;color:#071217;}
+.brand-logo{height:18px;max-width:115px;object-fit:contain;vertical-align:middle;margin-right:6px;background:rgba(255,255,255,.92);border-radius:4px;padding:2px 4px;box-shadow:0 0 0 1px rgba(255,255,255,.18);}
+.machine-watermark{position:absolute;right:12px;top:62px;z-index:450;background:rgba(10,20,12,.72);border:1px solid var(--border);border-radius:10px;padding:5px;pointer-events:none;}
+.machine-watermark img{width:180px;max-width:22vw;display:block;opacity:.88;}
+.folder.collapsed>.folder-body{display:none;}
+.folder-head{cursor:pointer;}
 #weatherPill,#notificationBtn{white-space:nowrap;}
 #notificationBtn{position:relative;}
 #notificationCount{position:absolute;top:-6px;right:-6px;background:#ff5a00;color:#111;border-radius:999px;font-size:10px;padding:1px 5px;display:none;}
@@ -78,21 +93,46 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 .notice-item b{color:var(--brand);}
 .viewer-mode-note{background:#e67e2233;border:1px solid #e67e22;border-radius:8px;color:#ffd6a3;padding:7px;margin-top:8px;font-size:11px;}
 .operation-line-strip{pointer-events:none;}
+.notice-actions{display:flex;gap:6px;align-items:center;margin-top:6px;}
+.notice-actions button{width:auto;margin:0;padding:3px 8px;font-size:11px;background:transparent;border:1px solid var(--brand);color:var(--brand);}
+.notice-read{opacity:.65;}
+.sv-point-label{display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:900;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.55);}
+
+
+#topAlertBanner{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:1200;min-width:320px;max-width:70vw;background:rgba(230,126,34,.96);color:#111;border:2px solid #ffd08a;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.45);display:none;text-align:center;}
+#topAlertBanner.show{display:block;}
+.settings-row{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:center;margin-top:7px;font-size:12px;color:var(--muted);}
+.settings-row input,.settings-row select{margin:0;}
+.critical-layer{border-color:#7DCD00!important;box-shadow:0 0 0 1px rgba(125,205,0,.25) inset;}
+.result-card{border:1px solid var(--border);border-radius:8px;padding:8px;background:#0f1a12;margin-top:8px;}
+
+@media(max-width:1100px){.admin-module-tabs button{padding:4px 6px;min-width:46px;font-size:8px}}
 @media(max-width:820px){.admin-module-tabs.visible{display:none}.topbar .right{gap:4px}.pill{font-size:9px;padding:3px 5px}}
 
 
-/* Capas/mapas base tipo QGIS */
-.layer-library-op{border:1px solid var(--border);border-radius:8px;background:#0f1a12;margin-top:8px;overflow:hidden;}
-.layer-library-head{padding:8px;background:#142719;color:var(--brand);font-weight:800;display:flex;justify-content:space-between;cursor:pointer;}
-.layer-library-body{padding:8px;display:none;}
-.layer-library-op.open .layer-library-body{display:block;}
-.layer-type-title{margin-top:8px;color:#f6b26b;font-weight:700;font-size:11px;border-bottom:1px dashed var(--border);padding-bottom:3px;}
-.layer-row-qgis{display:grid;grid-template-columns:18px 1fr auto;gap:6px;align-items:center;padding:5px;border-bottom:1px solid rgba(35,74,38,.55);font-size:11px;}
-.layer-row-qgis input{width:auto!important;margin:0!important;}
-.layer-row-qgis .layer-actions button{width:auto;margin:0 0 0 4px;padding:3px 5px;font-size:10px;}
+/* PATCH 2026-07-06 supervisor scope + seguimiento GPS */
+.machine-watermark{display:none!important;}
+#followGpsBtn{background:#17351d;border:1px solid var(--brand);color:var(--brand);margin-top:6px;}
+#followPanel{position:absolute;right:12px;bottom:12px;width:42%;height:42%;z-index:760;border:2px solid var(--brand);border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.55);background:#0f1a12;display:none;}
+#followPanel.open{display:block;}
+#followPanelHeader{position:absolute;left:0;right:0;top:0;z-index:770;background:rgba(10,20,12,.88);color:var(--brand);font-size:11px;font-weight:800;padding:5px 8px;display:flex;justify-content:space-between;align-items:center;}
+#followMap{position:absolute;inset:0;}
+#followPanelHeader button{width:auto;margin:0;padding:2px 6px;font-size:10px;background:transparent;border:1px solid var(--brand);color:var(--brand);}
+@media(max-width:820px){#followPanel{left:8px;right:8px;bottom:8px;width:auto;height:45%;}}
+.track-line-legend{font-size:10px;color:var(--muted);margin-top:4px;}
 
 
-.admin-section-hidden{display:none!important}
+/* PATCH seguro 2026-07-06: controles específicos por módulo y gráfica ampliable */
+.layout-only.admin-section-hidden{display:none!important;}
+.mini-chart{cursor:zoom-in;}
+#chartExpandModal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10020;display:none;align-items:center;justify-content:center;padding:18px;}
+#chartExpandModal.open{display:flex;}
+#chartExpandCard{width:min(1100px,96vw);height:min(720px,88vh);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;flex-direction:column;}
+#chartExpandHeader{display:flex;justify-content:space-between;align-items:center;color:var(--brand);font-weight:800;margin-bottom:8px;}
+#chartExpandContent{flex:1;min-height:0;background:#081009;border:1px solid var(--border);border-radius:8px;padding:8px;overflow:auto;}
+#chartExpandContent svg{width:100%;height:100%;min-height:520px;}
+.topo-history-note{border:1px dashed var(--brand);border-radius:8px;padding:7px;margin-top:8px;color:var(--muted);font-size:11px;background:#09100b;}
+
 </style>
 </head>
 <body>
@@ -156,6 +196,7 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
     <div class="small">Use un usuario supervisor creado en Firebase Authentication.</div>
     <label>Email supervisor</label><input id="supervisorEmail" placeholder="supervisor@empresa.com" type="email">
     <label>Contraseña</label><input id="supervisorPass" placeholder="Contraseña" type="password">
+    <label>Operación supervisor</label><select id="supervisorOperation"><option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option></select>
     <button id="btnSupervisorLogin" style="background:var(--brand);color:#0f1a12;border:none;">Login supervisor</button>
     <div id="supervisorLoginMsg" class="small"></div>
   </div>
@@ -222,18 +263,21 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 <button id="supervisorReportBtn">📋 Reporte diario</button>
 
 <div id="app" class="layout">
-  <div class="topbar"><h1 data-i18n="title">🟢 Tracker Operativo <span class="pill">MudMaster</span></h1>
+  <div class="topbar"><h1 data-i18n="title"><img class="brand-logo" src="data:image/webp;base64,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" alt="Phibion">🟢 Tracker Operativo <span class="pill">MudMaster</span></h1>
     <div id="adminModuleTabs" class="admin-module-tabs">
       <button data-section="layout" class="active">Layout</button>
-      <button data-section="layers">Capas</button>
       <button data-section="manual">Manual</button>
       <button data-section="folders">Áreas</button>
       <button data-section="dashboard">Dashboard</button>
-      <button data-section="topografia">Topografía</button>
-      <button data-section="shear">Shear Vane</button>
+      <button data-section="topografia">Topo</button>
+      <button data-section="shear">SV</button>
       <button data-section="messages">Mensajes</button>
+      <button data-section="results">Resultados</button>
+      <button data-section="planet">Planet</button>
+      <button data-section="settings" class="settings-tab">Config.</button>
     </div>
     <div class="right"><span id="weatherPill" class="pill">Clima --</span><button id="notificationBtn" class="btn-outline" style="width:auto;margin:0;">🔔<span id="notificationCount">0</span></button><select id="langSelect" style="width:auto;margin:0;padding:6px;"><option value="es">ESP</option><option value="en">ENG</option><option value="pt">PT</option></select><span id="cloudStatus" class="pill">Modo local</span><button id="btnAdminToggle" class="btn-outline">⚙ Admin</button></div></div>
+  <div id="topAlertBanner"></div>
   <div id="mobileTabs"><button id="tabPanel" class="active">📋 Panel</button><button id="tabMap">🗺 Mapa</button></div>
   <div id="mainRow">
     <div id="sidebar" class="show">
@@ -256,37 +300,14 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
       <h2>Trabajo anterior / Seguimiento</h2><div class="small">Carga recorridos anteriores de esta MM para ver dónde se detuvo la operación.</div><button id="btnLoadPrevious" class="btn-outline" style="width:100%;margin-top:8px;">Buscar trabajos anteriores</button><div id="previousList"></div>
       <h2>Historial local / KML</h2><div id="historyList"></div>
     </div>
-    <div id="map"><div id="fleetLegend"><h3>Flota en mapa</h3><div id="legendBody" class="small">Sin máquinas activas aún.</div></div><div id="passColorLegend"><h3>Leyenda pases</h3><div id="passLegendBody" class="small"></div></div></div>
+    <div id="map"><div class="machine-watermark"><img src="data:image/webp;base64,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" alt="MudMaster"></div><div id="fleetLegend"><h3>Flota en mapa</h3><div id="legendBody" class="small">Sin máquinas activas aún.</div></div><div id="passColorLegend"><h3>Leyenda pases</h3><div id="passLegendBody" class="small"></div></div></div>
     <aside id="adminRightPanel">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
         <h2 style="margin:0;color:var(--brand);border:0;">Panel Admin · Layout Operativo</h2>
         <button id="btnCloseRightAdmin" class="btn-outline">Ocultar</button>
       </div>
-      <div id="layoutIntroText" class="small" style="margin-top:6px;">Flujo metodológico para generar líneas automáticas dentro de un polígono. El layout y conteo quedan administrables desde este panel.</div>
-      <div id="layoutIntroTitle" class="layout-section-title">Layout Operativo</div>
-
-
-      <div class="step-card" data-admin-section="layers" style="display:none;">
-        <div class="step-title"><span class="step-num">0</span>Capas / Mapas base por operación</div>
-        <div class="small">Organización tipo QGIS por operación. Use este módulo para ortofotos JPG/PNG, KML/KMZ base, TIF de referencia y puntos/archivos operacionales. Los operadores solo ven las capas de su operación activa.</div>
-        <label>Operación de la capa</label>
-        <select id="layerUploadOperation"><option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option><option value="ALL">Todas</option></select>
-        <label>Descripción / referencia</label><input id="layerUploadDescription" placeholder="Ej: Ortofoto base julio / Límite operativo / Puntos SVT">
-        <label>Cargar KML/KMZ</label><input id="layerKmlInput" type="file" accept=".kml,.kmz" multiple>
-        <label>Cargar TIF / GeoTIFF</label><input id="layerTifInput" type="file" accept=".tif,.tiff" multiple>
-        <label>Cargar ortofoto JPG/PNG georreferenciada</label><input id="layerImgInput" type="file" accept=".png,.jpg,.jpeg" multiple>
-        <div class="login-row"><div><label>Lat Norte</label><input id="layerImgLatN" type="number" step="any"></div><div><label>Lat Sur</label><input id="layerImgLatS" type="number" step="any"></div></div>
-        <div class="login-row"><div><label>Lon Oeste</label><input id="layerImgLonW" type="number" step="any"></div><div><label>Lon Este</label><input id="layerImgLonE" type="number" step="any"></div></div>
-        <label style="display:flex;align-items:center;gap:6px;"><input id="layerUploadCritical" type="checkbox" checked> Capa fija / definitiva</label>
-        <div class="layout-actions-grid">
-          <button id="btnLayerUploadKml" class="btn-outline" type="button">Subir KML/KMZ</button>
-          <button id="btnLayerUploadTif" class="btn-outline" type="button">Subir TIF</button>
-          <button id="btnLayerUploadImg" class="btn-outline" type="button">Subir Imagen</button>
-          <button id="btnRefreshLayerLibrary" class="btn-outline" type="button">Actualizar árbol</button>
-        </div>
-        <div class="small" style="margin-top:8px;">Para ortofotos use JPG/PNG + coordenadas WGS84. Para análisis topográfico use GeoTIFF EPSG:4326 en el módulo Topografía.</div>
-        <div id="layerLibraryTree" style="margin-top:10px;">Sin capas.</div>
-      </div>
+      <div id="layoutIntroText" class="small layout-only" style="margin-top:6px;">Flujo metodológico para generar líneas automáticas dentro de un polígono. El layout y conteo quedan administrables desde este panel.</div>
+      <div id="layoutMainTitle" class="layout-section-title layout-only">Layout Operativo</div>
 
       <div class="step-card">
         <div class="step-title"><span class="step-num">1</span>Importar o dibujar polígono</div>
@@ -294,6 +315,7 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
         <input id="zonePolygonFile" type="file" accept=".kml,.kmz,.geojson,.json,.zip,.shp">
         <div class="small">Acepta KML/KMZ/GeoJSON. Para SHP, suba un ZIP con .shp, .shx, .dbf y .prj.</div>
         <button id="btnDrawZone" class="btn-outline" style="width:100%;margin-top:8px;">Dibujar polígono manualmente</button>
+        <button id="btnEditDraftPolygon" class="btn-outline" style="width:100%;margin-top:6px;">Editar vértices del polígono actual</button>
         <button id="btnClearDraftZone" class="btn-warn">Limpiar polígono temporal</button>
       </div>
 
@@ -347,13 +369,13 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 
 
       <div class="step-card">
-        <div class="step-title"><span class="step-num">4</span>Estándar de colores por pase</div>
-        <div class="small">Se define una vez y queda como estándar para todos los layouts.</div>
+        <div class="step-title"><span class="step-num">4</span>Estándar de intensidad</div>
+        <div class="small">Escala rainbow estándar: 0 = pendiente, 1 = azul, 12+ = rojo. Se aplica al polígono/franja operacional entre líneas.</div>
         <div class="pass-color-row"><span>Sin pase / pendiente</span><input id="colorPass0" type="color" value="#ffffff"></div>
-        <div class="pass-color-row"><span>Pase 1</span><input id="colorPass1" type="color" value="#7DCD00"></div>
-        <div class="pass-color-row"><span>Pase 2</span><input id="colorPass2" type="color" value="#4fc3f7"></div>
-        <div class="pass-color-row"><span>Pase 3</span><input id="colorPass3" type="color" value="#f1c40f"></div>
-        <div class="pass-color-row"><span>Pase 4+</span><input id="colorPass4" type="color" value="#9b59b6"></div>
+        <div class="pass-color-row"><span>Pase mínimo</span><input id="colorPass1" type="color" value="#0057ff"></div>
+        <div class="pass-color-row"><span>Pase medio</span><input id="colorPass2" type="color" value="#00d084"></div>
+        <div class="pass-color-row"><span>Pase alto</span><input id="colorPass3" type="color" value="#ffd000"></div>
+        <div class="pass-color-row"><span>Pase 12+</span><input id="colorPass4" type="color" value="#ff0000"></div>
         <button id="btnSavePassColors" class="btn-outline" style="width:100%;margin-top:8px;">Guardar estándar de colores</button>
       </div>
 
@@ -395,52 +417,85 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
         </div>
         <button id="btnUpdateDashboard" class="btn-outline" style="width:100%;margin-top:8px;">Actualizar dashboard</button>
         <button id="btnExportDashboardCsv" class="btn-outline" style="width:100%;margin-top:6px;">Exportar CSV</button>
+        <button id="btnExportIntensityGeoJson" class="btn-outline" style="width:100%;margin-top:6px;">Exportar intensidad operacional GIS</button>
         <div id="operationalDashboard" class="small" style="margin-top:8px;">Sin eventos filtrados.</div>
       </div>
 
 
-      <div class="step-card" data-admin-section="topografia" style="display:none;">
-        <div class="step-title"><span class="step-num">9</span>Topografía · Comparación rápida</div>
-        <div class="small"><b>Estándar:</b> cargar GeoTIFF en WGS84 / EPSG:4326. Para varios sitios, reproyecte en QGIS antes de subir. Los raster se usan de forma temporal para el cálculo; no quedan guardados como archivo permanente.</div>
-        <label>Operación</label>
-        <select id="topoOperation"><option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option></select>
-        <div class="login-row">
-          <div><label>Topografía anterior</label><input id="topoPreviousFile" type="file" accept=".tif,.tiff"></div>
-          <div><label>Fecha anterior</label><input id="topoPreviousDate" type="date"></div>
+      <div class="step-card" data-admin-section="topografia">
+        <div class="step-title"><span class="step-num">9</span>Topografía · Comparación temporal</div>
+        <div class="small">Carga temporalmente dos rasters/GeoTIFF para estimar cambios de superficie por área. Los rasters no se guardan en la nube; solo se genera el reporte resumen. Se intenta reproyectar EPSG:24877/24878/32717/32718 automáticamente en el navegador.</div>
+        <div class="dashboard-filter">
+          <div><label>Topografía anterior</label><input id="topoOldFile" type="file" accept=".tif,.tiff"></div>
+          <div><label>Fecha anterior</label><input id="topoOldDate" type="date"></div>
+          <div><label>Topografía actual</label><input id="topoNewFile" type="file" accept=".tif,.tiff"></div>
+          <div><label>Fecha actual</label><input id="topoNewDate" type="date"></div>
+          <div><label>Grilla comparación (m)</label><input id="topoGridM" type="number" step="0.5" value="2"></div>
+          <div><label>Operación</label><input id="topoOperationFilter" placeholder="Ej: Cerro Corona"></div>
         </div>
-        <div class="login-row">
-          <div><label>Topografía actual</label><input id="topoCurrentFile" type="file" accept=".tif,.tiff"></div>
-          <div><label>Fecha actual</label><input id="topoCurrentDate" type="date"></div>
-        </div>
-        <div class="login-row">
-          <div><label>Cota referencia (opcional)</label><input id="topoRefElev" type="number" step="0.01" placeholder="Ej: 275.00"></div>
-          <div><label>Resolución objetivo (m)</label><input id="topoResolution" type="number" step="0.5" value="2"></div>
-        </div>
-        <div class="layout-actions-grid">
-          <button id="btnRunTopoCompare" class="btn-outline" type="button">Comparar topografías</button>
-          <button id="btnExportTopoCsv" class="btn-outline" type="button">Exportar CSV</button>
-          <button id="btnExpandTopoChart" class="btn-outline" type="button">Ver gráfica grande</button>
-        </div>
-        <div id="topoStatus" class="small" style="margin-top:8px;">Sin comparación.</div>
-        <div id="topoChartBox" style="height:160px;margin-top:8px;border:1px solid var(--border);border-radius:8px;padding:8px;background:#0f1a12;"><canvas id="topoChartCanvas" width="420" height="140"></canvas></div>
-        <div id="topoResultTable" class="small" style="margin-top:8px;max-height:180px;overflow:auto;"></div>
+        <button id="btnRunTopoCompare" class="btn-outline" style="width:100%;margin-top:8px;">Comparar superficies por área</button>
+        <button id="btnExportTopoCsv" class="btn-outline" style="width:100%;margin-top:6px;">Exportar CSV comparación</button>
+        <div id="topoCompareResult" class="small" style="margin-top:8px;">Sin comparación.</div>
       </div>
 
       <div class="step-card" data-admin-section="shear">
-        <div class="step-title"><span class="step-num">9</span>Shear Vane · Base de datos</div>
+        <div class="step-title"><span class="step-num">10</span>Shear Vane · Base de datos</div>
         <div class="small">Los operadores registran ensayos desde el panel izquierdo. Aquí el admin/supervisor puede exportar los registros del día o revisar que se estén guardando en la nube.</div>
         <div class="dashboard-filter"><div><label>Fecha SV</label><input id="svAdminDate" type="date"></div><div><label>Operación</label><input id="svAdminOperation" placeholder="Cerro Corona"></div></div>
+        <label>Cargar puntos SV planificados (KML/KMZ/GeoJSON/SHP ZIP)</label><input id="svPointsFile" type="file" accept=".kml,.kmz,.geojson,.json,.zip,.shp">
+        <div class="small">Los puntos aparecen numerados en el mapa para que el operador identifique el punto cercano.</div>
+        <button id="btnImportSvPoints" class="btn-outline" style="width:100%;margin-top:8px;">Guardar puntos SV en nube</button>
+        <button id="btnShowSvPoints" class="btn-outline" style="width:100%;margin-top:6px;">Mostrar/ocultar puntos SV</button>
+        <button id="btnShowSvSmartMap" class="btn-outline" style="width:100%;margin-top:6px;">SmartMap SV del día</button>
         <button id="btnAdminExportShearCsv" class="btn-outline" style="width:100%;margin-top:8px;">Exportar Shear Vane CSV</button>
         <div id="svAdminSummary" class="small" style="margin-top:8px;">Sin consulta.</div>
       </div>
 
       <div class="step-card" data-admin-section="messages">
-        <div class="step-title"><span class="step-num">10</span>Mensajes a operadores</div>
+        <div class="step-title"><span class="step-num">11</span>Mensajes a operadores</div>
         <div class="small">Admin o supervisor puede publicar mensajes que aparecerán en la ventana de notificaciones de los operadores.</div>
         <label>Operación destino</label><select id="noticeOperation"><option value="ALL">Todas</option><option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option></select>
         <label>Mensaje</label><textarea id="noticeText" rows="3" placeholder="Ej: Suspender operación por lluvia / Coordinar toma de SV / Cambio de zona"></textarea>
         <button id="btnSendNotice" style="background:var(--brand);color:#0f1a12;border:none;margin-top:8px;">Enviar notificación</button>
         <div id="noticeAdminMsg" class="small"></div>
+      </div>
+
+      <div class="step-card" data-admin-section="settings">
+        <div class="step-title"><span class="step-num">12</span>Configuraciones internas</div>
+        <div class="small">Parámetros globales de alertas y capas críticas. Quedan guardados en Firebase.</div>
+        <div class="settings-row"><span>Alerta máquina detenida (min)</span><input id="alertStopMin" type="number" step="1" value="20"></div>
+        <div class="settings-row"><span>Velocidad detenida (km/h)</span><input id="alertStopSpeed" type="number" step="0.1" value="0.3"></div>
+        <div class="settings-row"><span>Alerta fuera de zona</span><select id="alertOutZone"><option value="true">Activa</option><option value="false">Inactiva</option></select></div>
+        <div class="settings-row"><span>Alerta SV alta (kPa)</span><input id="alertSvKpa" type="number" step="1" value="40"></div>
+        <div class="settings-row"><span>Mostrar mensaje en pantalla (s)</span><input id="alertBannerSec" type="number" step="10" value="120"></div>
+        <div class="settings-row"><span>Tamaño marcador SV planificado</span><input id="svMarkerSize" type="number" step="1" value="18"></div>
+        <div class="settings-row"><span>Tamaño número SV</span><input id="svLabelSize" type="number" step="1" value="10"></div>
+        <div class="settings-row"><span>Color marcador SV</span><input id="svMarkerColor" type="color" value="#7DCD00"></div>
+        <div class="settings-row"><span>Color texto SV</span><input id="svTextColor" type="color" value="#0f1a12"></div>
+        <button id="btnSaveInternalSettings" style="background:var(--brand);color:#0f1a12;border:none;margin-top:8px;">Guardar configuraciones</button>
+        <div id="internalSettingsMsg" class="small"></div>
+        <div class="small" style="margin-top:8px;">Capas definitivas: si una capa se marca como crítica, no se elimina desde la app; solo se puede ocultar/mostrar.</div>
+        <div id="criticalLayerList" class="small">Sin capas cargadas.</div>
+      </div>
+
+      <div class="step-card" data-admin-section="results">
+        <div class="step-title"><span class="step-num">13</span>Resultados operacionales</div>
+        <div class="small">Compila Shear Vane, intensidad operacional y liberación volumétrica por operación.</div>
+        <div class="dashboard-filter"><div><label>Fecha desde</label><input id="resDateFrom" type="date"></div><div><label>Fecha hasta</label><input id="resDateTo" type="date"></div><div><label>Operación</label><input id="resOperation" placeholder="Cerro Corona"></div></div>
+        <label>Volumen liberado estimado / observado (m³)</label><input id="resVolume" type="number" step="1" placeholder="Ej: 25000">
+        <button id="btnUpdateResults" class="btn-outline" style="width:100%;margin-top:8px;">Actualizar resultados</button>
+        <button id="btnExportResultsCsv" class="btn-outline" style="width:100%;margin-top:6px;">Exportar resultados CSV</button>
+        <div id="resultsDashboard" class="small" style="margin-top:8px;">Sin consulta.</div>
+      </div>
+
+      <div class="step-card" data-admin-section="planet">
+        <div class="step-title"><span class="step-num">14</span>Planet / imágenes satelitales</div>
+        <div class="small">Preparado para integración con Planet vía backend seguro. No guarde API keys de Planet dentro del HTML público.</div>
+        <label>Endpoint seguro de sincronización</label><input id="planetSyncEndpoint" placeholder="https://.../planet-sync">
+        <label>Operación / AOI</label><input id="planetOperation" placeholder="Cerro Corona">
+        <button id="btnSavePlanetConfig" class="btn-outline" style="width:100%;margin-top:8px;">Guardar configuración Planet</button>
+        <button id="btnPlanetSyncNow" class="btn-outline" style="width:100%;margin-top:6px;">Sincronizar ahora</button>
+        <div id="planetSyncMsg" class="small" style="margin-top:8px;">Sin sincronización.</div>
       </div>
     </aside>
   </div>
@@ -563,15 +618,16 @@ if(document.getElementById('btnGenerateDailyReport')) document.getElementById('b
   const byZone={}; Object.values(events).forEach(ev=>{ const k=(ev.operationCode?ev.operationCode+'-':'')+(ev.zoneName||ev.zoneKey||'Zona'); if(!byZone[k])byZone[k]={cruces:0,lineas:new Set(),maquinas:new Set()}; byZone[k].cruces++; if(ev.lineName)byZone[k].lineas.add(ev.lineName); if(ev.maquina)byZone[k].maquinas.add(ev.maquina); });
   const photos=document.getElementById('reportPhotos').files; const photoHtml=[]; for(const f of photos){ try{ const u=await fileToDataUrl(f); photoHtml.push(`<img src="${u}" style="max-width:260px;margin:6px;border:1px solid #ccc">`);}catch(e){} }
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte diario ${date}</title><style>body{font-family:Arial;margin:24px}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border:1px solid #999;padding:6px;text-align:left}h1{color:#2e7d32}
-/* Capas/mapas base tipo QGIS */
-.layer-library-op{border:1px solid var(--border);border-radius:8px;background:#0f1a12;margin-top:8px;overflow:hidden;}
-.layer-library-head{padding:8px;background:#142719;color:var(--brand);font-weight:800;display:flex;justify-content:space-between;cursor:pointer;}
-.layer-library-body{padding:8px;display:none;}
-.layer-library-op.open .layer-library-body{display:block;}
-.layer-type-title{margin-top:8px;color:#f6b26b;font-weight:700;font-size:11px;border-bottom:1px dashed var(--border);padding-bottom:3px;}
-.layer-row-qgis{display:grid;grid-template-columns:18px 1fr auto;gap:6px;align-items:center;padding:5px;border-bottom:1px solid rgba(35,74,38,.55);font-size:11px;}
-.layer-row-qgis input{width:auto!important;margin:0!important;}
-.layer-row-qgis .layer-actions button{width:auto;margin:0 0 0 4px;padding:3px 5px;font-size:10px;}
+/* PATCH 2026-07-06 supervisor scope + seguimiento GPS */
+.machine-watermark{display:none!important;}
+#followGpsBtn{background:#17351d;border:1px solid var(--brand);color:var(--brand);margin-top:6px;}
+#followPanel{position:absolute;right:12px;bottom:12px;width:42%;height:42%;z-index:760;border:2px solid var(--brand);border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.55);background:#0f1a12;display:none;}
+#followPanel.open{display:block;}
+#followPanelHeader{position:absolute;left:0;right:0;top:0;z-index:770;background:rgba(10,20,12,.88);color:var(--brand);font-size:11px;font-weight:800;padding:5px 8px;display:flex;justify-content:space-between;align-items:center;}
+#followMap{position:absolute;inset:0;}
+#followPanelHeader button{width:auto;margin:0;padding:2px 6px;font-size:10px;background:transparent;border:1px solid var(--brand);color:var(--brand);}
+@media(max-width:820px){#followPanel{left:8px;right:8px;bottom:8px;width:auto;height:45%;}}
+.track-line-legend{font-size:10px;color:var(--muted);margin-top:4px;}
 
 </style></head><body><h1>Reporte diario operacional</h1><p><b>Fecha:</b> ${date}<br><b>Supervisor:</b> ${sup}</p><h2>Resumen de líneas</h2><table><tr><th>Área</th><th>Cruces</th><th>Líneas ejecutadas</th><th>MM involucradas</th></tr>${Object.entries(byZone).map(([k,v])=>`<tr><td>${k}</td><td>${v.cruces}</td><td>${v.lineas.size}</td><td>${[...v.maquinas].join(', ')}</td></tr>`).join('')||'<tr><td colspan="4">Sin cruces registrados.</td></tr>'}</table><h2>Horas operativas</h2><table><tr><th>MMn°</th><th>Horas</th><th>Observación</th></tr>${rows.map(r=>`<tr><td>${r[0]||''}</td><td>${r[1]||''}</td><td>${r[2]||''}</td></tr>`).join('')}</table><h2>Observaciones</h2><p>${obs.replace(/\n/g,'<br>')}</p><h2>Fotos</h2>${photoHtml.join('')||'<p>Sin fotos adjuntas.</p>'}</body></html>`;
   downloadFile(`reporte_diario_${date}.html`, html); document.getElementById('reportMsg').textContent='Reporte generado.';
@@ -612,7 +668,6 @@ function subscribeSharedLayers(){
     renderSharedLayerInfo(normalized);
     renderLayerControls(normalized);
     renderAllSharedLayers(normalized);
-    try{renderLayerLibrary(normalized);}catch(e){}
   });
 }
 function renderSharedLayerInfo(data){
@@ -627,18 +682,30 @@ function renderLayerControls(data){
   const el=document.getElementById('layerControlList');
   if(!el) return;
   const rows=[];
-  Object.entries(data.kmls||{}).filter(([id,k])=>layerMatchesScope(k)).forEach(([id,k])=>rows.push(layerControlHtml(id,'KML',k.name||id,k.updatedAt||'')));
-  Object.entries(data.tifs||{}).filter(([id,t])=>layerMatchesScope(t)).forEach(([id,t])=>rows.push(layerControlHtml(id,'TIF',t.name||id,t.updatedAt||'')));
-  Object.entries(data.images||{}).filter(([id,img])=>layerMatchesScope(img)).forEach(([id,img])=>rows.push(layerControlHtml(id,'IMG',img.name||id,img.updatedAt||''))); 
+  Object.entries(data.kmls||{}).forEach(([id,k])=>rows.push(layerControlHtml(id,'KML',k.name||id,k.updatedAt||'')));
+  Object.entries(data.tifs||{}).forEach(([id,t])=>rows.push(layerControlHtml(id,'TIF',t.name||id,t.updatedAt||'')));
+  Object.entries(data.images||{}).forEach(([id,img])=>rows.push(layerControlHtml(id,'IMG',img.name||id,img.updatedAt||''))); 
   el.innerHTML=rows.join('') || '<div class="small">Sin capas operacionales.</div>';
 }
+function getSharedLayerMeta(id){ return (sharedLayerData.kmls&&sharedLayerData.kmls[id])||(sharedLayerData.tifs&&sharedLayerData.tifs[id])||(sharedLayerData.images&&sharedLayerData.images[id])||{}; }
 function layerControlHtml(id,type,name,updatedAt){
   const visible=isLayerVisible(id);
+  const meta=getSharedLayerMeta(id);
   const checked=visible?'checked':'';
+  const critical=!!meta.critical;
   const status=visible?'<span class="layer-status on">Visible</span>':'<span class="layer-status off">Oculto</span>';
-  const del=fb.admin ? `<button onclick="deleteSharedLayer('${id}')">Eliminar</button>` : '';
+  const del=(fb.admin && !critical) ? `<button onclick="deleteSharedLayer('${id}')">Eliminar</button>` : '';
+  const crit=(fb.admin ? `<button onclick="toggleCriticalLayer('${id}')" style="border-color:${critical?'#7DCD00':'var(--border)'};color:${critical?'#7DCD00':'var(--muted)'};">${critical?'Fija':'Fijar'}</button>` : '');
   const zoom=`<button onclick="zoomToSharedLayer('${id}')" style="border-color:var(--brand);color:var(--brand);">Zoom</button>`;
-  return `<div class="layer-control-item"><label><input type="checkbox" ${checked} onchange="toggleSharedLayer('${id}', this.checked)"><span><b>${type}</b> ${name}<br><small>${updatedAt||''}</small><br>${status}</span></label>${zoom}${del}</div>`;
+  return `<div class="layer-control-item ${critical?'critical-layer':''}"><label><input type="checkbox" ${checked} onchange="toggleSharedLayer('${id}', this.checked)"><span><b>${type}</b> ${name}${critical?' · 🔒':''}<br><small>${updatedAt||''}</small><br>${status}</span></label>${zoom}${crit}${del}</div>`;
+}
+async function toggleCriticalLayer(id){
+  if(!fb.admin||!fb.db) return;
+  const meta=getSharedLayerMeta(id); const next=!meta.critical;
+  let path=null; if(sharedLayerData.kmls&&sharedLayerData.kmls[id]) path='sharedLayers/kmls/'+id+'/critical';
+  if(sharedLayerData.tifs&&sharedLayerData.tifs[id]) path='sharedLayers/tifs/'+id+'/critical';
+  if(sharedLayerData.images&&sharedLayerData.images[id]) path='sharedLayers/images/'+id+'/critical';
+  if(path) await fb.db.ref(path).set(next);
 }
 function zoomToSharedLayer(id){
   const lyr=sharedKmlLayers[id] || sharedTifLayers[id] || sharedImageLayers[id];
@@ -652,6 +719,7 @@ function zoomToSharedLayer(id){
 }
 async function deleteSharedLayer(id){
   if(!fb.admin){alert('Debe entrar como admin.');return;}
+  if(getSharedLayerMeta(id).critical){alert('Esta capa está marcada como definitiva. Solo se puede ocultar/mostrar.');return;}
   if(!confirm('¿Eliminar esta capa para todos?')) return;
   try{
     if(sharedLayerData.kmls && sharedLayerData.kmls[id]) await fb.db.ref('sharedLayers/kmls/'+id).remove();
@@ -686,9 +754,9 @@ function renderAllSharedLayers(data){
   Object.keys(sharedTifLayers).forEach(id=>{ if(!incomingTifIds.has(id)){ map.removeLayer(sharedTifLayers[id]); delete sharedTifLayers[id]; }});
   const incomingImgIds=new Set(Object.keys(data.images||{}));
   Object.keys(sharedImageLayers).forEach(id=>{ if(!incomingImgIds.has(id)){ map.removeLayer(sharedImageLayers[id]); delete sharedImageLayers[id]; }});
-  Object.entries(data.kmls||{}).forEach(([id,k])=>{ if(layerMatchesScope(k) && isLayerVisible(id)) renderSharedKML(id,k); else removeOperationalLayer(id); });
-  Object.entries(data.tifs||{}).forEach(([id,t])=>{ if(layerMatchesScope(t) && isLayerVisible(id)) renderSharedTIF(id,t); else removeOperationalLayer(id); });
-  Object.entries(data.images||{}).forEach(([id,img])=>{ if(layerMatchesScope(img) && isLayerVisible(id)) renderSharedImage(id,img); else removeOperationalLayer(id); });
+  Object.entries(data.kmls||{}).forEach(([id,k])=>{ if(isLayerVisible(id)) renderSharedKML(id,k); });
+  Object.entries(data.tifs||{}).forEach(([id,t])=>{ if(isLayerVisible(id)) renderSharedTIF(id,t); });
+  Object.entries(data.images||{}).forEach(([id,img])=>{ if(isLayerVisible(id)) renderSharedImage(id,img); });
 }
 function kmlTextToDom(kmlText){ return new DOMParser().parseFromString(kmlText,'text/xml'); }
 function textOf(el, tag){ const n=el.getElementsByTagName(tag)[0]; return n ? (n.textContent||'').trim() : ''; }
@@ -946,12 +1014,13 @@ async function saveSession(record){ if(!fb.db||!FIREBASE_ENABLED) return; const 
 // =========================================================
 // Control de pases por zona - TEST MVP
 // Admin define: polígono + espaciamiento + rotación. La app genera líneas internas y cuenta cruces GPS.
-let draftZoneLayer=null, draftZoneCoords=null, drawZoneHandler=null, draftPreviewLayer=null;
+let draftZoneLayer=null, draftZoneCoords=null, drawZoneHandler=null, draftPreviewLayer=null, draftEditGroup=null, draftEditHandler=null;
 let draftStartLineCoords=null, draftEndLineCoords=null, drawParamLineHandler=null, drawParamLineType=null;
 let operationLayouts={}, operationLayoutLayers={}, passCountsToday={}, passEventsToday={}, passEventsDashboard=null;
 let controlLineIndex=[], controlCrossCooldown={};
-let passColorSettings={p0:'#ffffff',p1:'#7DCD00',p2:'#4fc3f7',p3:'#f1c40f',p4:'#9b59b6'};
+let passColorSettings={p0:'#ffffff'};
 let manualMode=false, manualZoneKey=null;
+try{ draftEditGroup = new L.FeatureGroup().addTo(map); }catch(e){ draftEditGroup=null; }
 function todayKey(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function dateKeyFromDate(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function parseDateKey(k){ const [y,m,d]=String(k).split('-').map(Number); return new Date(y,(m||1)-1,d||1); }
@@ -975,7 +1044,7 @@ function updateOperationCodeFromName(force=false){
 }
 function layoutDisplayName(z, zoneKey){ return `${z.operation_code?z.operation_code+'-':''}${z.name||zoneKey}`; }
 
-function syncRotationInputs(v){ const n=Number(v)||0; const rot=((n%360)+360)%360; const a=document.getElementById('zoneRotation'), b=document.getElementById('zoneRotationSlider'); if(a) a.value=rot; if(b) b.value=rot; }
+function syncRotationInputs(v){ const n=Number(v)||0; const rot=((n%180)+180)%180; const a=document.getElementById('zoneRotation'), b=document.getElementById('zoneRotationSlider'); if(a) a.value=rot; if(b) b.value=rot; }
 const rotInput=document.getElementById('zoneRotation'), rotSlider=document.getElementById('zoneRotationSlider');
 if(rotInput) rotInput.addEventListener('input',e=>{syncRotationInputs(e.target.value); updateZonePreview();});
 if(rotSlider) rotSlider.addEventListener('input',e=>{syncRotationInputs(e.target.value); updateZonePreview();});
@@ -1030,8 +1099,14 @@ function polygonAreaM2(coords){
 }
 function lineMidLL(l){ return [(l.a[0]+l.b[0])/2, (l.a[1]+l.b[1])/2]; }
 function getZoneBaseColor(z){ return (z && z.line_color) || document.getElementById('zoneLineColor')?.value || '#ffffff'; }
-function lineColorByCount(c, baseColor){ c=Number(c)||0; if(c<=0) return passColorSettings.p0 || baseColor || '#ffffff'; if(c===1) return passColorSettings.p1; if(c===2) return passColorSettings.p2; if(c===3) return passColorSettings.p3; return passColorSettings.p4; }
-function updatePassLegend(){ const el=document.getElementById('passLegendBody'); if(!el) return; el.innerHTML=`<div class="legend-row"><span class="legend-dot" style="background:${passColorSettings.p0}"></span>Pendiente</div><div class="legend-row"><span class="legend-dot" style="background:${passColorSettings.p1}"></span>1 pase</div><div class="legend-row"><span class="legend-dot" style="background:${passColorSettings.p2}"></span>2 pases</div><div class="legend-row"><span class="legend-dot" style="background:${passColorSettings.p3}"></span>3 pases</div><div class="legend-row"><span class="legend-dot" style="background:${passColorSettings.p4}"></span>4+ pases</div>`; }
+function lineColorByCount(c, baseColor){
+  c=Number(c)||0;
+  if(c<=0) return passColorSettings.p0 || baseColor || '#ffffff';
+  const defaults=['#0057ff','#008cff','#00c8ff','#00d084','#74d600','#b7d900','#ffd000','#ffae00','#ff8500','#ff5a00','#ff2a00','#ff0000'];
+  const idx=Math.min(12, Math.max(1, Math.round(c)));
+  return passColorSettings['p'+idx] || defaults[idx-1] || '#ff0000';
+}
+function updatePassLegend(){ const el=document.getElementById('passLegendBody'); if(!el) return; const items=[0,1,2,3,4,5,6,7,8,9,10,11,12]; el.innerHTML=items.map(v=>`<div class="legend-row"><span class="legend-dot" style="background:${lineColorByCount(v)}"></span>${v===0?'Pendiente':(v>=12?'12+ pases':v+' pase(s)')}</div>`).join(''); }
 function applyPassColorsToInputs(){ const map={colorPass0:'p0',colorPass1:'p1',colorPass2:'p2',colorPass3:'p3',colorPass4:'p4'}; Object.entries(map).forEach(([id,k])=>{const el=document.getElementById(id); if(el) el.value=passColorSettings[k];}); updatePassLegend(); }
 async function savePassColors(){ if(!fb.admin){ alert('Solo admin puede cambiar el estándar de colores.'); return; } passColorSettings={p0:document.getElementById('colorPass0').value,p1:document.getElementById('colorPass1').value,p2:document.getElementById('colorPass2').value,p3:document.getElementById('colorPass3').value,p4:document.getElementById('colorPass4').value}; localStorage.setItem('passColorSettings', JSON.stringify(passColorSettings)); if(fb.db) await fb.db.ref('settings/passColors').set(passColorSettings); updatePassLegend(); renderOperationLayouts(); renderOperationTree(); alert('Estándar de colores guardado.'); }
 try{ const saved=JSON.parse(localStorage.getItem('passColorSettings')||'{}'); passColorSettings={...passColorSettings,...saved}; }catch(e){} setTimeout(applyPassColorsToInputs,0);
@@ -1091,7 +1166,9 @@ function setDraftPolygon(coords, sourceName='polígono'){
   const first=coords[0], last=coords[coords.length-1];
   if(first && last && Math.abs(first[0]-last[0])<1e-10 && Math.abs(first[1]-last[1])<1e-10) coords=coords.slice(0,-1);
   draftZoneCoords=coords.map(c=>[Number(c[0]),Number(c[1])]).filter(c=>Number.isFinite(c[0])&&Number.isFinite(c[1]));
-  draftZoneLayer=L.polygon(draftZoneCoords,{color:'#ff3b30',weight:2,fillOpacity:.08}).addTo(map);
+  if(draftEditGroup) draftEditGroup.clearLayers();
+  draftZoneLayer=L.polygon(draftZoneCoords,{color:'#ff3b30',weight:2,fillOpacity:.08,interactive:true});
+  if(draftEditGroup){ draftEditGroup.addLayer(draftZoneLayer); } else { draftZoneLayer.addTo(map); }
   try{map.fitBounds(draftZoneLayer.getBounds(),{padding:[20,20]});}catch(e){}
   const zn=document.getElementById('zoneName'); if(zn && !zn.value) zn.value=sourceName.replace(/\.[^.]+$/,'').slice(0,40);
   updateZonePreview();
@@ -1132,7 +1209,31 @@ async function importZonePolygonFile(e){
   catch(err){ alert('Error leyendo polígono: '+err.message); }
   e.target.value='';
 }
-function clearDraftZone(){ clearDraftPreview(); if(draftZoneLayer){ map.removeLayer(draftZoneLayer); draftZoneLayer=null; } draftZoneCoords=null; const info=document.getElementById('zoneDraftInfo'); if(info) info.textContent='Sin polígono temporal.'; }
+function clearDraftZone(){ clearDraftPreview(); if(draftEditHandler){try{draftEditHandler.disable();}catch(e){} draftEditHandler=null;} if(draftEditGroup){try{draftEditGroup.clearLayers();}catch(e){}} else if(draftZoneLayer){ try{map.removeLayer(draftZoneLayer);}catch(e){} } draftZoneLayer=null; draftZoneCoords=null; const info=document.getElementById('zoneDraftInfo'); if(info) info.textContent='Sin polígono temporal.'; }
+
+function editDraftPolygonVertices(){
+  if(!fb.admin){ alert('Solo admin puede editar polígonos.'); return; }
+  if(!draftZoneLayer || !draftEditGroup){ alert('Primero importe o dibuje un polígono.'); return; }
+  if(draftEditHandler){ try{draftEditHandler.disable();}catch(e){} draftEditHandler=null; }
+  draftEditHandler = new L.EditToolbar.Edit(map,{featureGroup:draftEditGroup, selectedPathOptions:{maintainColor:true}});
+  draftEditHandler.enable();
+  alert('Edición de vértices activa. Mueva los vértices en el mapa y luego presione Guardar edición de vértices.');
+  const btn=document.getElementById('btnEditDraftPolygon'); if(btn) btn.textContent='Guardar edición de vértices';
+}
+function saveDraftPolygonVertices(){
+  if(!draftZoneLayer){ return; }
+  try{
+    if(draftEditHandler){ draftEditHandler.save(); draftEditHandler.disable(); draftEditHandler=null; }
+    const lls=draftZoneLayer.getLatLngs()[0]||[];
+    draftZoneCoords=lls.map(ll=>[ll.lat,ll.lng]);
+    updateZonePreview();
+    const btn=document.getElementById('btnEditDraftPolygon'); if(btn) btn.textContent='Editar vértices del polígono actual';
+    alert('Vértices actualizados. Recuerde presionar Generar / guardar layout para guardar el área.');
+  }catch(e){ alert('No se pudo guardar la edición de vértices: '+e.message); }
+}
+function toggleDraftPolygonEdit(){ if(draftEditHandler) saveDraftPolygonVertices(); else editDraftPolygonVertices(); }
+if(document.getElementById('btnEditDraftPolygon')) document.getElementById('btnEditDraftPolygon').onclick=toggleDraftPolygonEdit;
+
 function updateParamLineInfo(){
   const el=document.getElementById('paramLineInfo'); if(!el) return;
   el.innerHTML=`INICIO: <b>${draftStartLineCoords?'definida':'no definida'}</b> · FINAL: <b>${draftEndLineCoords?'definida':'no definida'}</b>`;
@@ -1201,9 +1302,21 @@ async function saveGeneratedZone(){
   const payload={operation_name:operationName,operation_code:operationCode,name,zone_slug:zoneSlug,zoneKey,polygon:draftZoneCoords,spacing_m:spacing,rotation_deg:rotation,tolerance_m:tolerance,cooldown_sec:cooldown,line_color:lineColor,plan_speed_kmh:planSpeed,hours_day:hoursDay,show_start_line:showStart,show_end_line:showEnd,start_line:draftStartLineCoords,end_line:draftEndLineCoords,lines,center:generated.center,updatedAt:isoLocal(new Date()),updatedBy:(fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||'admin'};
   await fb.db.ref('operationCodes/'+safeKey(operationName)).set(operationCode);
   await fb.db.ref('operationLayouts/'+zoneKey).set(payload);
+  const wasEditing=!!editingLayoutKey;
   editingLayoutKey=null;
-  alert(`Layout ${operationCode}-${name} guardado con ${segments.length} líneas generadas.`); renderOperationTree();
+  alert(`Layout ${operationCode}-${name} ${wasEditing?'actualizado':'guardado'} con ${segments.length} líneas generadas.`);
+  resetLayoutEditorForm();
+  renderOperationTree();
 }
+function resetLayoutEditorForm(){
+  clearDraftZone(); clearParamLines();
+  ['operationName','operationCode','zoneName'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  const defaults={zoneSpacing:'6.25',zoneRotation:'0',zoneTolerance:'4',zoneCooldown:'25',zoneLineColor:'#ffffff',zonePlanSpeed:'1.0',zoneHoursDay:'8.5'};
+  Object.entries(defaults).forEach(([id,val])=>{const el=document.getElementById(id); if(el) el.value=val;});
+  syncRotationInputs(0);
+  const info=document.getElementById('zoneDraftInfo'); if(info) info.textContent='Sin polígono temporal.';
+}
+
 function editOperationZone(zoneKey){
   const z=operationLayouts[zoneKey]; if(!z){ alert('No encontré esa zona.'); return; }
   editingLayoutKey=zoneKey;
@@ -1221,7 +1334,7 @@ function editOperationZone(zoneKey){
   if(document.getElementById('showEndLine')) document.getElementById('showEndLine').checked=z.show_end_line!==false;
   draftStartLineCoords=z.start_line||null; draftEndLineCoords=z.end_line||null; updateParamLineInfo();
   setDraftPolygon((z.polygon||[]).map(c=>[c[0],c[1]]), z.name||zoneKey);
-  openAdminRight();
+  openAdminRight(); setAdminSection('layout');
   alert('Zona cargada para edición. Ajuste rotación, polígono o parámetros y presione Generar / guardar layout.');
 }
 async function deleteOperationZone(zoneKey){
@@ -1235,7 +1348,7 @@ async function deleteOperationZone(zoneKey){
 function subscribeOperationLayouts(){ if(!fb.db) return; fb.db.ref('operationLayouts').on('value',snap=>{ operationLayouts=snap.val()||{}; rebuildControlLineIndex(); renderOperationLayouts(); renderOperationTree(); renderPassSummary(); renderOperationalDashboard(); }); fb.db.ref('passCounts/'+todayKey()).on('value',snap=>{ passCountsToday=snap.val()||{}; renderOperationLayouts(); renderOperationTree(); renderPassSummary(); renderOperationalDashboard(); }); fb.db.ref('passEvents/'+todayKey()).limitToLast(500).on('value',snap=>{ passEventsToday=snap.val()||{}; renderOperationTree(); renderPassSummary(); renderOperationalDashboard(); }); }
 function rebuildControlLineIndex(){
   controlLineIndex=[];
-  Object.entries(operationLayouts||{}).forEach(([zoneKey,z])=>{
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
     const coords=z.polygon||[]; if(!coords.length||!z.lines) return; const proj=makeProjector(coords);
     Object.entries(z.lines).forEach(([lineKey,l])=>{ const a=proj.toXY(l.a), b=proj.toXY(l.b); controlLineIndex.push({kind:'operational',zoneKey,lineKey,operationName:z.operation_name||'',operationCode:z.operation_code||'',zoneName:z.name||zoneKey,lineName:l.name||lineKey,a,b,proj,tolerance_m:Number(z.tolerance_m)||4,cooldown_sec:Number(z.cooldown_sec)||25}); });
     if(z.start_line && z.start_line.length>=2){ const a=proj.toXY(z.start_line[0]), b=proj.toXY(z.start_line[z.start_line.length-1]); controlLineIndex.push({kind:'param_start',zoneKey,lineKey:'PARAM_START',operationName:z.operation_name||'',operationCode:z.operation_code||'',zoneName:z.name||zoneKey,lineName:(z.operation_code?z.operation_code+'-':'')+(z.name||zoneKey)+'-INICIO',a,b,proj,tolerance_m:Number(z.tolerance_m)||4,cooldown_sec:Number(z.cooldown_sec)||25}); }
@@ -1250,7 +1363,7 @@ function getLineTotalCount(zoneKey,lineKey){
 function renderOperationLayouts(){
   Object.values(operationLayoutLayers).forEach(g=>{try{map.removeLayer(g)}catch(e){}}); operationLayoutLayers={};
   const show=document.getElementById('showControlLines'); const operatorToggle=document.getElementById('operatorShowLayout'); const allowView = fb.admin || fb.supervisor || (operatorToggle && operatorToggle.checked); if(!allowView) return; if(fb.admin && show && !show.checked) return;
-  Object.entries(operationLayouts||{}).forEach(([zoneKey,z])=>{
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
     if(!zoneVisible(zoneKey)) return;
     const group=L.layerGroup();
     if(z.polygon) L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);
@@ -1316,10 +1429,13 @@ function exportZoneGeoJSON(zoneKey){
 }
 
 function zoomToOperationZone(zoneKey){ const z=operationLayouts[zoneKey]; if(!z||!z.polygon) return; try{ map.fitBounds(L.polygon(z.polygon).getBounds(),{padding:[20,20]}); showMap(); }catch(e){} }
+function toggleFolderBody(el){
+  const folder=el.closest('.folder'); if(folder) folder.classList.toggle('collapsed');
+}
 function renderOperationTree(){
   const el=document.getElementById('operationTree'); if(!el) return;
   if(!(fb.admin||fb.supervisor)){ el.innerHTML='Visible solo para admin/supervisor.'; return; }
-  const entries=Object.entries(operationLayouts||{});
+  const entries=Object.entries(scopedLayouts(operationLayouts)||{});
   if(!entries.length){ el.innerHTML='Sin layouts guardados.'; return; }
   const ops={};
   entries.forEach(([zoneKey,z])=>{ const code=z.operation_code||'GEN'; if(!ops[code]) ops[code]={name:z.operation_name||'Operación sin nombre', code, zones:[]}; ops[code].zones.push([zoneKey,z]); });
@@ -1329,13 +1445,12 @@ function renderOperationTree(){
       const area=z.polygon?polygonAreaM2(z.polygon)/10000:0;
       const visible=zoneVisible(zoneKey);
       const est=estimateZoneTimes(lines, z.plan_speed_kmh||1, z.hours_day||8.5);
-      const lineRows=visible ? keys.slice(0,20).map((lk,i)=>{ const c=getLineTotalCount(zoneKey,lk); const nm=(lines[lk].name||lk).replace((z.operation_code?z.operation_code+'-':'')+(z.name||zoneKey)+'-',''); return `<div class="tree-line"><span>${nm}</span><span>${c} cruce(s)</span></div>`; }).join('') : '<div class="small">Líneas ocultas en mapa.</div>';
-      const more=visible && keys.length>20?`<div class="small">... ${keys.length-20} líneas adicionales</div>`:'';
+      const lineRows=keys.map((lk,i)=>{ const c=getLineTotalCount(zoneKey,lk); const nm=(lines[lk].name||lk).replace((z.operation_code?z.operation_code+'-':'')+(z.name||zoneKey)+'-',''); return `<div class="tree-line"><span>${nm}</span><span>${c} cruce(s)</span></div>`; }).join('');
       const checked=visible?'checked':'';
       const adminBtns=fb.admin?`<button class="btn-outline" onclick="editOperationZone('${zoneKey}')">Editar</button><button class="btn-danger" onclick="deleteOperationZone('${zoneKey}')">Eliminar</button>`:'';
-      return `<div class="folder" style="margin-left:10px;"><div class="folder-head"><span>📂 ${layoutDisplayName(z,zoneKey)}</span><span>${total} líneas</span></div><div class="folder-body"><div class="small">Área: ${area.toFixed(2)} ha · Esp.: ${z.spacing_m||'-'} m · Rot.: ${z.rotation_deg||0}° · Color: <span style="display:inline-block;width:10px;height:10px;background:${getZoneBaseColor(z)};border:1px solid #fff"></span></div><div class="metric-grid"><div class="metric-box">Longitud<br><b>${est.km.toFixed(2)} km</b></div><div class="metric-box">1x MM<br><b>${est.oneText}</b></div><div class="metric-box">2x MM<br><b>${est.twoText}</b></div><div class="metric-box">Vel. plan<br><b>${z.plan_speed_kmh||1} km/h</b></div></div><div class="folder-actions"><label style="display:flex;align-items:center;gap:5px;margin:0;"><input type="checkbox" ${checked} onchange="toggleZoneLayout('${zoneKey}', this.checked)"> Mostrar líneas</label><button class="btn-outline" onclick="toggleZoneLayout('${zoneKey}', true); zoomToOperationZone('${zoneKey}')">Zoom</button>${adminBtns}<button class="btn-outline" onclick="exportZoneKML('${zoneKey}')">KML</button><button class="btn-outline" onclick="exportZoneGeoJSON('${zoneKey}')">GeoJSON</button></div>${lineRows}${more}</div></div>`;
+      return `<div class="folder collapsed" style="margin-left:10px;"><div class="folder-head" onclick="toggleFolderBody(this)"><span>📂 ${layoutDisplayName(z,zoneKey)}</span><span>${total} líneas</span></div><div class="folder-body"><div class="small">Área: ${area.toFixed(2)} ha · Esp.: ${z.spacing_m||'-'} m · Rot.: ${z.rotation_deg||0}° · Color: <span style="display:inline-block;width:10px;height:10px;background:${getZoneBaseColor(z)};border:1px solid #fff"></span></div><div class="metric-grid"><div class="metric-box">Longitud<br><b>${est.km.toFixed(2)} km</b></div><div class="metric-box">1x MM<br><b>${est.oneText}</b></div><div class="metric-box">2x MM<br><b>${est.twoText}</b></div><div class="metric-box">Vel. plan<br><b>${z.plan_speed_kmh||1} km/h</b></div></div><div class="folder-actions"><label style="display:flex;align-items:center;gap:5px;margin:0;"><input type="checkbox" ${checked} onchange="event.stopPropagation();toggleZoneLayout('${zoneKey}', this.checked)"> Mostrar líneas</label><button class="btn-outline" onclick="event.stopPropagation();toggleZoneLayout('${zoneKey}', true); zoomToOperationZone('${zoneKey}')">Zoom</button>${adminBtns}<button class="btn-outline" onclick="event.stopPropagation();exportZoneKML('${zoneKey}')">KML</button><button class="btn-outline" onclick="event.stopPropagation();exportZoneGeoJSON('${zoneKey}')">GeoJSON</button></div><div class="small" style="margin-top:6px;">Líneas generadas</div>${lineRows}</div></div>`;
     }).join('');
-    return `<div class="folder"><div class="folder-head"><span>📁 ${op.code} · ${op.name}</span><span>${op.zones.length} área(s)</span></div><div class="folder-body">${zonesHtml}</div></div>`;
+    return `<div class="folder collapsed"><div class="folder-head" onclick="toggleFolderBody(this)"><span>📁 ${op.code} · ${op.name}</span><span>${op.zones.length} área(s)</span></div><div class="folder-body">${zonesHtml}</div></div>`;
   }).join('');
   fillManualZoneSelect();
 }
@@ -1367,7 +1482,7 @@ function renderPassSummary(){
   const el=document.getElementById('passSummary'); if(!el) return;
   if(!fb.admin){ el.innerHTML='Conteo oculto para operadores.'; return; }
   const rows=[];
-  Object.entries(operationLayouts||{}).forEach(([zoneKey,z])=>{
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
     const lines=z.lines||{}, lineKeys=Object.keys(lines), total=lineKeys.length; let totalCross=0, withOne=0; const perLineTotals={};
     Object.values((passCountsToday[zoneKey]||{})).forEach(machineCounts=>{ Object.entries(machineCounts||{}).forEach(([lk,v])=>{ perLineTotals[lk]=(perLineTotals[lk]||0)+(Number(v)||0); }); });
     lineKeys.forEach(lk=>{ const c=perLineTotals[lk]||0; totalCross+=c; if(c>0) withOne++; });
@@ -1383,7 +1498,7 @@ function renderPassSummary(){
 function fillManualZoneSelect(){
   const sel=document.getElementById('manualZone'); if(!sel) return;
   const val=sel.value;
-  sel.innerHTML=Object.entries(operationLayouts||{}).map(([k,z])=>`<option value="${k}">${layoutDisplayName(z,k)}</option>`).join('') || '<option value="">Sin zonas</option>';
+  sel.innerHTML=Object.entries(scopedLayouts(operationLayouts)||{}).map(([k,z])=>`<option value="${k}">${layoutDisplayName(z,k)}</option>`).join('') || '<option value="">Sin zonas</option>';
   if(val) sel.value=val;
 }
 function setManualMode(on){
@@ -1538,7 +1653,7 @@ function configureViewerMode(isViewer){
 
 // Botones naranjos superiores: muestran solo el módulo elegido en el panel derecho.
 const ADMIN_SECTIONS={
-  layout:[1,2,3], layers:[0], colors:[4], manual:[5], folders:[6,7], dashboard:[8], topografia:[9], shear:[9], messages:[10]
+  layout:[1,2,3], colors:[4], manual:[5], folders:[6,7], dashboard:[8], topografia:[9], shear:[10], messages:[11], settings:[12], results:[13], planet:[14]
 };
 function classifyAdminStepCards(){
   document.querySelectorAll('#adminRightPanel .step-card').forEach(card=>{
@@ -1550,17 +1665,13 @@ function setAdminSection(section){
   classifyAdminStepCards();
   const nums=ADMIN_SECTIONS[section]||ADMIN_SECTIONS.layout;
   document.querySelectorAll('#adminRightPanel .step-card').forEach(card=>{
-    const explicit=card.dataset.adminSection;
     const n=Number(card.dataset.stepNum||0);
-    const show = explicit ? explicit===section : nums.includes(n);
-    card.classList.toggle('admin-section-hidden', !show);
+    card.classList.toggle('admin-section-hidden', !nums.includes(n));
   });
-  const introVisible = section==='layout';
-  document.getElementById('layoutIntroText')?.classList.toggle('admin-section-hidden', !introVisible);
-  document.getElementById('layoutIntroTitle')?.classList.toggle('admin-section-hidden', !introVisible);
   document.querySelectorAll('#adminModuleTabs button').forEach(b=>b.classList.toggle('active', b.dataset.section===section));
+  document.querySelectorAll('#adminRightPanel .layout-only').forEach(el=>el.classList.toggle('admin-section-hidden', section!=='layout'));
   const title=document.querySelector('#adminRightPanel h2');
-  if(title){ const map={layout:'Panel Admin · Layout Operativo',colors:'Panel Admin · Colores estándar',manual:'Panel Admin · Operación manual',folders:'Panel Admin · Áreas y conteo',dashboard:'Panel Admin · Dashboard',topografia:'Panel Admin · Topografía',shear:'Panel Admin · Shear Vane',messages:'Panel Admin · Mensajes', layers:'Panel Admin · Capas / Mapas base'}; title.textContent=map[section]||map.layout; }
+  if(title){ const map={layout:'Panel Admin · Layout Operativo',colors:'Panel Admin · Colores estándar',manual:'Panel Admin · Operación manual',folders:'Panel Admin · Áreas y conteo',dashboard:'Panel Admin · Dashboard',topografia:'Panel Admin · Topografía',shear:'Panel Admin · Shear Vane',messages:'Panel Admin · Mensajes',settings:'Panel Admin · Configuraciones internas',results:'Panel Admin · Resultados',planet:'Panel Admin · Planet'}; title.textContent=map[section]||map.layout; }
 }
 document.querySelectorAll('#adminModuleTabs button').forEach(b=>b.addEventListener('click',()=>{ openAdminRight(); setAdminSection(b.dataset.section); }));
 const oldOpenAdminRight=openAdminRight;
@@ -1568,98 +1679,33 @@ openAdminRight=function(){ oldOpenAdminRight(); document.getElementById('adminMo
 const oldCloseAdminRight=closeAdminRight;
 closeAdminRight=function(){ oldCloseAdminRight(); if(!(fb.admin||fb.supervisor)) document.getElementById('adminModuleTabs')?.classList.remove('visible'); };
 
-
-
-// Módulo Topografía: fechas desde nombre de archivo + comparación temporal placeholder GIS.
-let lastTopoRows=[];
-function extractDateFromFilename(name){
-  const s=String(name||'');
-  let m=s.match(/(20\d{2})[-_ ]?(0[1-9]|1[0-2])[-_ ]?([0-3]\d)/);
-  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m=s.match(/([0-3]\d)[-_ ]?(0[1-9]|1[0-2])[-_ ]?(20\d{2})/);
-  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
-  m=s.match(/(20\d{2})[-_ ]?(0[1-9]|1[0-2])/);
-  if(m) return `${m[1]}-${m[2]}-01`;
-  return '';
+// Clima básico usando ubicación del navegador + Open-Meteo.
+function weatherIcon(code){
+  code=Number(code);
+  if([0].includes(code)) return '☀️';
+  if([1,2,3].includes(code)) return '⛅';
+  if([45,48].includes(code)) return '🌫️';
+  if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
+  if([71,73,75,77,85,86].includes(code)) return '❄️';
+  if([95,96,99].includes(code)) return '⛈️';
+  return '🌦️';
 }
-function bindTopoDateGuess(){
-  const pairs=[['topoPreviousFile','topoPreviousDate'],['topoCurrentFile','topoCurrentDate']];
-  pairs.forEach(([fid,did])=>{
-    const f=document.getElementById(fid), d=document.getElementById(did); if(!f||!d) return;
-    f.addEventListener('change',()=>{ const file=f.files&&f.files[0]; const guess=extractDateFromFilename(file?.name); if(guess && !d.value) d.value=guess; });
-  });
+function compactLocationLabel(lat,lon){
+  const op=currentOperation && currentOperation!=='Otra' ? currentOperation.replace('Cerro Corona','CC').replace('Peñasquito','PQ') : '';
+  return op ? `📍 ${op}` : `📍 ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
 }
-function drawTopoChart(rows){
-  const c=document.getElementById('topoChartCanvas'); if(!c) return; const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height);
-  ctx.fillStyle='#8fae86'; ctx.font='11px Segoe UI,Arial';
-  if(!rows.length){ ctx.fillText('Sin datos',12,24); return; }
-  const max=Math.max(...rows.map(r=>Math.max(Math.abs(r.cut_m3),Math.abs(r.fill_m3))),1);
-  const barW=Math.max(18,Math.floor((c.width-80)/rows.length));
-  const zero=80;
-  ctx.strokeStyle='#234a26'; ctx.beginPath(); ctx.moveTo(40,zero); ctx.lineTo(c.width-10,zero); ctx.stroke();
-  rows.forEach((r,i)=>{
-    const x=45+i*barW; const fillH=(r.fill_m3/max)*60, cutH=(Math.abs(r.cut_m3)/max)*55;
-    ctx.fillStyle='#7DCD00'; ctx.fillRect(x,zero-fillH,barW*0.35,fillH);
-    ctx.fillStyle='#e67e22'; ctx.fillRect(x+barW*0.4,zero,barW*0.35,cutH);
-    ctx.fillStyle='#8fae86'; ctx.save(); ctx.translate(x,132); ctx.rotate(-Math.PI/5); ctx.fillText(r.zone,0,0); ctx.restore();
-  });
-  ctx.fillStyle='#7DCD00'; ctx.fillText('Fill m³',c.width-90,16); ctx.fillStyle='#e67e22'; ctx.fillText('Cut m³',c.width-90,32);
-}
-function renderTopoRows(rows){
-  const el=document.getElementById('topoResultTable'); if(!el) return;
-  if(!rows.length){ el.innerHTML='<div class="small">Sin resultados.</div>'; return; }
-  el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:11px;"><tr><th>Área</th><th>Área ha</th><th>Fill m³</th><th>Cut m³</th><th>Net m³</th><th>Pend. %</th><th>Pases</th><th>SVT prom.</th></tr>'+rows.map(r=>`<tr><td>${r.zone}</td><td>${r.area_ha}</td><td>${r.fill_m3}</td><td>${r.cut_m3}</td><td>${r.net_m3}</td><td>${r.slope_pct}</td><td>${r.passes}</td><td>${r.svt_avg}</td></tr>`).join('')+'</table>';
-}
-function fakeTopoRowsFromLayouts(){
-  const op=document.getElementById('topoOperation')?.value||'';
-  const rows=[];
-  Object.entries(operationLayouts||{}).forEach(([key,z])=>{
-    if(op && z.operation && z.operation!==op) return;
-    const areaHa=Number(z.area_ha||0);
-    const lines=(z.lines||[]).length;
-    const passes=Object.values(passCountsToday?.[key]||{}).reduce((a,b)=>a+(Number(b)||0),0);
-    const fill=Math.round(areaHa*lines*0.7); const cut=-Math.round(areaHa*lines*0.45);
-    rows.push({zone:layoutDisplayName(z,key), area_ha:areaHa.toFixed(2), fill_m3:fill, cut_m3:cut, net_m3:fill+cut, slope_pct:(Math.min(12,Math.max(0.2, lines/120))).toFixed(1), passes, svt_avg:'--'});
-  });
-  rows.sort((a,b)=>(Math.abs(b.fill_m3)+Math.abs(b.cut_m3))-(Math.abs(a.fill_m3)+Math.abs(a.cut_m3)));
-  return rows;
-}
-function runTopoCompare(){
-  const prev=document.getElementById('topoPreviousFile')?.files?.[0], cur=document.getElementById('topoCurrentFile')?.files?.[0];
-  const status=document.getElementById('topoStatus');
-  if(!prev||!cur){ alert('Cargue topografía anterior y actual en GeoTIFF EPSG:4326.'); return; }
-  lastTopoRows=fakeTopoRowsFromLayouts();
-  if(!lastTopoRows.length){ lastTopoRows=[{zone:'Sin áreas cargadas',area_ha:'0.00',fill_m3:0,cut_m3:0,net_m3:0,slope_pct:'--',passes:0,svt_avg:'--'}]; }
-  if(status) status.textContent=`Comparación temporal registrada: ${document.getElementById('topoPreviousDate')?.value||'fecha inicial'} → ${document.getElementById('topoCurrentDate')?.value||'fecha final'}. Nota: cálculo final requiere GeoTIFF EPSG:4326 alineados; esta tabla usa las áreas operativas cargadas como base del reporte.`;
-  renderTopoRows(lastTopoRows); drawTopoChart(lastTopoRows);
-  try{ if(fb.db) fb.db.ref(`operations/${safeKey(document.getElementById('topoOperation')?.value||'General')}/topographyComparisons/${Date.now()}`).set({previous_file:prev.name,current_file:cur.name,previous_date:document.getElementById('topoPreviousDate')?.value||'',current_date:document.getElementById('topoCurrentDate')?.value||'',rows:lastTopoRows,created_at:new Date().toISOString()}); }catch(e){}
-}
-function exportTopoCsv(){
-  if(!lastTopoRows.length){ alert('Primero ejecute una comparación.'); return; }
-  const header='zone,area_ha,fill_m3,cut_m3,net_m3,slope_pct,passes,svt_avg\n';
-  const body=lastTopoRows.map(r=>[r.zone,r.area_ha,r.fill_m3,r.cut_m3,r.net_m3,r.slope_pct,r.passes,r.svt_avg].join(',')).join('\n');
-  downloadFile(`topografia_comparacion_${todayKey()}.csv`,header+body,'text/csv');
-}
-function expandTopoChart(){
-  const w=window.open('','_blank'); if(!w) return; const rows=JSON.stringify(lastTopoRows);
-  w.document.write(`<html><head><title>Gráfica Topografía</title><style>body{background:#0f1a12;color:#e8f5e0;font-family:Segoe UI,Arial;padding:20px}canvas{background:#132417;border:1px solid #234a26;border-radius:10px}</style></head><body><h2>Topografía · Cut / Fill</h2><canvas id="c" width="1100" height="480"></canvas><script>const rows=${rows};const c=document.getElementById('c'),ctx=c.getContext('2d');ctx.fillStyle='#8fae86';ctx.font='13px Arial';const max=Math.max(...rows.map(r=>Math.max(Math.abs(r.cut_m3),Math.abs(r.fill_m3))),1);const zero=230;const bw=Math.max(24,Math.floor((c.width-120)/Math.max(rows.length,1)));ctx.strokeStyle='#8fae86';ctx.beginPath();ctx.moveTo(50,zero);ctx.lineTo(c.width-20,zero);ctx.stroke();rows.forEach((r,i)=>{const x=60+i*bw;const fh=(r.fill_m3/max)*180,ch=(Math.abs(r.cut_m3)/max)*180;ctx.fillStyle='#7DCD00';ctx.fillRect(x,zero-fh,bw*.35,fh);ctx.fillStyle='#e67e22';ctx.fillRect(x+bw*.4,zero,bw*.35,ch);ctx.fillStyle='#e8f5e0';ctx.save();ctx.translate(x,zero+ch+35);ctx.rotate(-.45);ctx.fillText(r.zone,0,0);ctx.restore();});<\/script></body></html>`);
-}
-bindTopoDateGuess();
-document.getElementById('btnRunTopoCompare')?.addEventListener('click',runTopoCompare);
-document.getElementById('btnExportTopoCsv')?.addEventListener('click',exportTopoCsv);
-document.getElementById('btnExpandTopoChart')?.addEventListener('click',expandTopoChart);
-
 // Clima básico usando ubicación del navegador + Open-Meteo.
 async function updateWeatherPill(){
   const pill=document.getElementById('weatherPill'); if(!pill||!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(async pos=>{
     try{
       const lat=pos.coords.latitude, lon=pos.coords.longitude;
-      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,precipitation,wind_speed_10m&timezone=auto`);
+      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,precipitation,wind_speed_10m,weather_code&timezone=auto`);
       const j=await r.json(); const c=j.current||{};
-      pill.textContent=`${Math.round(c.temperature_2m)}°C · ${Number(c.precipitation||0).toFixed(1)}mm · ${Math.round(c.wind_speed_10m||0)}km/h`;
-    }catch(e){ pill.textContent='Clima no disponible'; }
-  },()=>{pill.textContent='Clima --';},{enableHighAccuracy:false,maximumAge:600000,timeout:8000});
+      pill.textContent=`${compactLocationLabel(lat,lon)} · ${weatherIcon(c.weather_code)} ${Math.round(c.temperature_2m)}°C · ${Number(c.precipitation||0).toFixed(1)}mm · ${Math.round(c.wind_speed_10m||0)}km/h`;
+      pill.title=`Ubicación GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    }catch(e){ pill.textContent='📍 -- · Clima no disponible'; }
+  },()=>{pill.textContent='📍 -- · Clima --';},{enableHighAccuracy:false,maximumAge:600000,timeout:8000});
 }
 setTimeout(updateWeatherPill,1200); setInterval(updateWeatherPill,15*60*1000);
 
@@ -1752,56 +1798,1117 @@ layerControlHtml=function(id,type,name,updatedAt){
   return oldLayerControlHtml(id,type,name,updatedAt);
 };
 
+
+
+// ---- PATCH 2026-07-05: módulos topografía, SV planificado, intensidad por franjas ----
+function interpolateHex(c1,c2,t){
+  c1=c1.replace('#',''); c2=c2.replace('#','');
+  const a=[parseInt(c1.slice(0,2),16),parseInt(c1.slice(2,4),16),parseInt(c1.slice(4,6),16)];
+  const b=[parseInt(c2.slice(0,2),16),parseInt(c2.slice(2,4),16),parseInt(c2.slice(4,6),16)];
+  const r=a.map((v,i)=>Math.round(v+(b[i]-v)*Math.max(0,Math.min(1,t))));
+  return '#'+r.map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function rainbowPassColor(count){
+  count=Number(count)||0;
+  if(count<=0) return passColorSettings.p0||'#ffffff';
+  const stops=[['#0057ff',1],['#00d4ff',3],['#00d084',5],['#ffff00',8],['#ff7a00',10],['#ff0000',12]];
+  if(count<=1) return stops[0][0]; if(count>=12) return stops[stops.length-1][0];
+  for(let i=0;i<stops.length-1;i++){ const [cA,vA]=stops[i], [cB,vB]=stops[i+1]; if(count>=vA && count<=vB) return interpolateHex(cA,cB,(count-vA)/(vB-vA)); }
+  return '#ff0000';
+}
+lineColorByCount=function(c, baseColor){ c=Number(c)||0; return c<=0 ? (passColorSettings.p0 || baseColor || '#ffffff') : rainbowPassColor(c); };
+updatePassLegend=function(){
+  const el=document.getElementById('passLegendBody'); if(!el) return;
+  const rows=[0,1,3,5,8,10,12].map(n=>`<div class="legend-row"><span class="legend-dot" style="background:${lineColorByCount(n)}"></span>${n===0?'Pendiente':(n>=12?'12+ pases':n+' pases')}</div>`).join('');
+  el.innerHTML=rows;
+};
+setTimeout(updatePassLegend,0);
+function stripKeyFor(lk1,lk2){ return 'STRIP__'+safeKey(lk1)+'__'+safeKey(lk2); }
+function getStripTotalCount(zoneKey,stripKey){
+  let total=0;
+  Object.values((passCountsToday[zoneKey]||{})).forEach(machineCounts=>{ total += Number((machineCounts||{})[stripKey]||0); });
+  return total;
+}
+async function manualStripClick(zoneKey,stripKey,label){
+  if(!manualMode) return;
+  if(!(fb.admin||fb.supervisor)){ alert('Solo admin o supervisor puede marcar operación manual.'); return; }
+  if(manualZoneKey && zoneKey!==manualZoneKey) return;
+  const date=document.getElementById('manualDate')?.value || todayKey();
+  const maquina=(document.getElementById('manualMachine')?.value || document.getElementById('maquina')?.value || '').trim();
+  const operador=(document.getElementById('manualUser')?.value || document.getElementById('operador')?.value || '').trim();
+  if(!maquina){ alert('Ingrese MMn° para la operación manual.'); return; }
+  const machineKey=safeKey(maquina);
+  try{
+    await fb.db.ref(`passCounts/${date}/${zoneKey}/${machineKey}/${stripKey}`).transaction(v=>(Number(v)||0)+1);
+    const evKey=fb.db.ref(`passEvents/${date}`).push().key;
+    const z=operationLayouts[zoneKey]||{};
+    await fb.db.ref(`passEvents/${date}/${evKey}`).set({ts:new Date().toISOString(),date,kind:'manual_operation_strip',operationCode:z.operation_code||'',operationName:z.operation_name||'',zoneKey,zoneName:z.name||zoneKey,lineKey:stripKey,lineName:label||stripKey,maquina,operador,manual:true});
+    renderOperationLayouts(); renderOperationTree(); renderPassSummary();
+  }catch(e){ alert('No se pudo guardar operación manual: '+e.message); }
+}
+renderOperationLayouts=function(){
+  Object.values(operationLayoutLayers).forEach(g=>{try{map.removeLayer(g)}catch(e){}}); operationLayoutLayers={};
+  const show=document.getElementById('showControlLines'); const operatorToggle=document.getElementById('operatorShowLayout');
+  const allowView = fb.admin || fb.supervisor || (operatorToggle && operatorToggle.checked); if(!allowView) return; if(fb.admin && show && !show.checked) return;
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
+    if(!zoneVisible(zoneKey)) return;
+    const group=L.layerGroup();
+    if(z.polygon) L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);
+    const vals=Object.entries(z.lines||{});
+    for(let i=0;i<vals.length-1;i++){
+      const [lk1,l1]=vals[i], [lk2,l2]=vals[i+1];
+      const sk=stripKeyFor(lk1,lk2);
+      const stripCnt=getStripTotalCount(zoneKey,sk) || Math.min(getLineTotalCount(zoneKey,lk1),getLineTotalCount(zoneKey,lk2));
+      const stripColor=lineColorByCount(stripCnt, getZoneBaseColor(z));
+      const poly=L.polygon([l1.a,l1.b,l2.b,l2.a],{className:'operation-strip-hover',color:stripCnt>0?stripColor:'#ffffff',weight:stripCnt>0?1:0,fillColor:stripCnt>0?stripColor:'#ffffff',fillOpacity:stripCnt>0?0.45:0.03,interactive:(fb.admin||fb.supervisor)}).bindTooltip(`${layoutDisplayName(z,zoneKey)} · Franja ${i+1}-${i+2} · ${stripCnt} pase(s)`,{sticky:true});
+      poly.on('click',()=>manualStripClick(zoneKey,sk,`${layoutDisplayName(z,zoneKey)} · Franja ${i+1}-${i+2}`));
+      poly.addTo(group);
+    }
+    vals.forEach(([lk,l],idx)=>{
+      const cnt=getLineTotalCount(zoneKey,lk);
+      const pl=L.polyline([l.a,l.b],{color:getZoneBaseColor(z),weight:1,opacity:.68,interactive:(fb.admin||fb.supervisor)}).bindTooltip(`${l.name}${fb.admin?` · cruces línea: ${cnt}`:''}`,{sticky:true});
+      pl.on('click',()=>manualLineClick(zoneKey,lk,l));
+      pl.addTo(group);
+      if(idx===0 || (idx+1)%5===0){
+        const cls=cnt>=3?'done3':(cnt===2?'done2':(cnt===1?'done1':''));
+        L.marker(lineMidLL(l),{interactive:false,icon:L.divIcon({className:'',html:`<span class="line-label ${cls}">${idx+1}</span>`,iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group);
+      }
+    });
+    if(fb.admin && z.show_start_line!==false && z.start_line && z.start_line.length>=2){
+      L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip(`${layoutDisplayName(z,zoneKey)} · INICIO`,{sticky:true}).addTo(group);
+      L.marker(z.start_line[Math.floor(z.start_line.length/2)],{interactive:false,icon:L.divIcon({className:'',html:`<span class="param-label">INICIO</span>`,iconSize:[58,16],iconAnchor:[29,-8]})}).addTo(group);
+    }
+    if(fb.admin && z.show_end_line!==false && z.end_line && z.end_line.length>=2){
+      L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip(`${layoutDisplayName(z,zoneKey)} · FINAL`,{sticky:true}).addTo(group);
+      L.marker(z.end_line[Math.floor(z.end_line.length/2)],{interactive:false,icon:L.divIcon({className:'',html:`<span class="param-label">FINAL</span>`,iconSize:[58,16],iconAnchor:[29,-8]})}).addTo(group);
+    }
+    group.addTo(map); operationLayoutLayers[zoneKey]=group;
+  });
+};
+
+// Topografía temporal: compara dos GeoTIFF EPSG:4326 o ya compatibles con lon/lat. No sube los rasters a Firebase.
+let topoCompareRows=[];
+function readRasterFile(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>parseGeoraster(r.result).then(res).catch(rej); r.onerror=rej; r.readAsArrayBuffer(file); }); }
+function rasterXYFromLatLon(gr, lat, lon){
+  let x=lon, y=lat;
+  const prj=String(gr.projection||gr.crs||'');
+  const epsgMatch=prj.match(/EPSG[:\/]*([0-9]+)/i) || String(gr.projectionString||'').match(/EPSG[:\/]*([0-9]+)/i);
+  const epsg=epsgMatch?('EPSG:'+epsgMatch[1]):'';
+  if(window.proj4 && epsg && epsg!=='EPSG:4326'){
+    try{ const out=proj4('EPSG:4326', epsg, [lon,lat]); x=out[0]; y=out[1]; }catch(e){}
+  }
+  return {x,y,epsg:epsg||'native'};
+}
+function georasterValueAt(gr, lat, lon){
+  if(!gr || !gr.values || gr.values.length===0) return null;
+  const pt=rasterXYFromLatLon(gr,lat,lon);
+  const xmin=gr.xmin, ymax=gr.ymax, pw=gr.pixelWidth, ph=Math.abs(gr.pixelHeight);
+  if(!Number.isFinite(xmin)||!Number.isFinite(ymax)||!Number.isFinite(pw)||!Number.isFinite(ph)) return null;
+  const col=Math.floor((pt.x-xmin)/pw), row=Math.floor((ymax-pt.y)/ph);
+  if(row<0||col<0||row>=gr.height||col>=gr.width) return null;
+  const v=gr.values[0][row][col];
+  if(v===gr.noDataValue || v===null || v===undefined || !Number.isFinite(Number(v))) return null;
+  return Number(v);
+}
+function bboxOfPolygon(poly){ const lats=poly.map(p=>p[0]), lons=poly.map(p=>p[1]); return {minLat:Math.min(...lats),maxLat:Math.max(...lats),minLon:Math.min(...lons),maxLon:Math.max(...lons)}; }
+function approxStepDegMeters(m, lat){ return {dLat:m/111320, dLon:m/(111320*Math.max(0.2,Math.cos(lat*Math.PI/180)))}; }
+async function runTopoCompare(){
+  const oldF=document.getElementById('topoOldFile')?.files?.[0], newF=document.getElementById('topoNewFile')?.files?.[0];
+  if(!oldF||!newF){ alert('Seleccione topografía anterior y actual.'); return; }
+  const el=document.getElementById('topoCompareResult'); if(el) el.textContent='Procesando rasters temporalmente...';
+  try{
+    const [oldR,newR]=await Promise.all([readRasterFile(oldF), readRasterFile(newF)]);
+    const gridM=Math.max(2, Number(document.getElementById('topoGridM')?.value)||2);
+    const opFilter=(document.getElementById('topoOperationFilter')?.value||'').toLowerCase().trim();
+    topoCompareRows=[];
+    Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
+      if(opFilter && !(String(z.operation_name||'').toLowerCase().includes(opFilter)||String(z.operation_code||'').toLowerCase().includes(opFilter))) return;
+      if(!z.polygon||z.polygon.length<3) return;
+      const bb=bboxOfPolygon(z.polygon), midLat=(bb.minLat+bb.maxLat)/2, st=approxStepDegMeters(gridM,midLat);
+      let n=0,sum=0,min=Infinity,max=-Infinity;
+      for(let lat=bb.minLat; lat<=bb.maxLat; lat+=st.dLat){
+        for(let lon=bb.minLon; lon<=bb.maxLon; lon+=st.dLon){
+          const xy=makeProjector(z.polygon); if(!pointInPolyXY(xy.toXY([lat,lon]), z.polygon.map(c=>xy.toXY(c)))) continue;
+          const a=georasterValueAt(oldR,lat,lon), b=georasterValueAt(newR,lat,lon); if(a===null||b===null) continue;
+          const d=b-a; n++; sum+=d; if(d<min)min=d; if(d>max)max=d;
+          if(n>25000) break;
+        }
+        if(n>25000) break;
+      }
+      const areaHa=polygonAreaM2(z.polygon)/10000;
+      topoCompareRows.push({operacion:z.operation_name||'',zona:layoutDisplayName(z,zoneKey),area_ha:areaHa,muestras:n,diff_media_m:n?sum/n:null,diff_min_m:n?min:null,diff_max_m:n?max:null,fecha_anterior:document.getElementById('topoOldDate')?.value||'',fecha_actual:document.getElementById('topoNewDate')?.value||''});
+    });
+    if(el) el.innerHTML=topoCompareRows.length?`<table class="pass-table"><thead><tr><th>Zona</th><th>Área ha</th><th>Muestras</th><th>Δ medio m</th><th>Δ mín</th><th>Δ máx</th></tr></thead><tbody>${topoCompareRows.map(r=>`<tr><td>${r.zona}</td><td>${r.area_ha.toFixed(2)}</td><td>${r.muestras}</td><td>${r.diff_media_m===null?'N/D':r.diff_media_m.toFixed(2)}</td><td>${r.diff_min_m===null?'N/D':r.diff_min_m.toFixed(2)}</td><td>${r.diff_max_m===null?'N/D':r.diff_max_m.toFixed(2)}</td></tr>`).join('')}</tbody></table>`:'Sin resultados. Revise que los rasters cubran las áreas; se intenta reproyectar EPSG:24877/32717, pero algunos GeoTIFF no publican bien su EPSG.';
+  }catch(e){ if(el) el.textContent='Error comparación topográfica: '+e.message; }
+}
+function exportTopoCsv(){
+  if(!topoCompareRows.length){ alert('Primero ejecute la comparación.'); return; }
+  const head=['fecha_anterior','fecha_actual','operacion','zona','area_ha','muestras','diff_media_m','diff_min_m','diff_max_m'];
+  const rows=[head,...topoCompareRows.map(r=>head.map(k=>r[k]??''))];
+  downloadFile('comparacion_topografica.csv', rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n'), 'text/csv');
+}
+setTimeout(()=>{ const a=document.getElementById('btnRunTopoCompare'); if(a)a.onclick=runTopoCompare; const b=document.getElementById('btnExportTopoCsv'); if(b)b.onclick=exportTopoCsv; },400);
+
+// Export GIS de intensidad operacional: GeoJSON de franjas con conteo, listo para abrir en QGIS y rasterizar/heatmap.
+function exportOperationalIntensityGeoJson(){
+  const features=[];
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
+    const vals=Object.entries(z.lines||{});
+    for(let i=0;i<vals.length-1;i++){
+      const [lk1,l1]=vals[i], [lk2,l2]=vals[i+1]; const sk=stripKeyFor(lk1,lk2);
+      const count=getStripTotalCount(zoneKey,sk) || Math.min(getLineTotalCount(zoneKey,lk1),getLineTotalCount(zoneKey,lk2));
+      features.push({type:'Feature',properties:{operation:z.operation_name||'',operation_code:z.operation_code||'',zone:z.name||zoneKey,strip:`${i+1}-${i+2}`,passes:count,color:lineColorByCount(count)},geometry:{type:'Polygon',coordinates:[[[l1.a[1],l1.a[0]],[l1.b[1],l1.b[0]],[l2.b[1],l2.b[0]],[l2.a[1],l2.a[0]],[l1.a[1],l1.a[0]]]]}});
+    }
+  });
+  downloadFile(`intensidad_operacional_${todayKey()}.geojson`, JSON.stringify({type:'FeatureCollection',features},null,2), 'application/geo+json');
+}
+setTimeout(()=>{ const b=document.getElementById('btnExportIntensityGeoJson'); if(b)b.onclick=exportOperationalIntensityGeoJson; },500);
+
+// Shear Vane: puntos planificados, numeración y mapa de alerta >35 kPa.
+let svPointLayer=null, svTestLayer=null, svPointsVisible=false;
+function extractPointFeaturesFromGeoJSON(gj){
+  const feats = gj.type==='FeatureCollection'?gj.features:(gj.type==='Feature'?[gj]:[{type:'Feature',properties:{},geometry:gj}]);
+  const pts=[];
+  feats.forEach((f,i)=>{ const g=f.geometry||f; if(!g) return; const props=f.properties||{}; if(g.type==='Point') pts.push({name:props.name||props.Name||props.POINT||String(i+1),lat:g.coordinates[1],lon:g.coordinates[0],properties:props}); });
+  return pts;
+}
+async function readPointFile(file){
+  const lower=(file.name||'').toLowerCase(); let gj=null;
+  if(lower.endsWith('.geojson')||lower.endsWith('.json')) gj=JSON.parse(await file.text());
+  else if(lower.endsWith('.kml')) gj=toGeoJSON.kml(kmlTextToDom(await file.text()));
+  else if(lower.endsWith('.kmz')){ const zip=await JSZip.loadAsync(await file.arrayBuffer()); const k=Object.keys(zip.files).find(n=>n.toLowerCase().endsWith('.kml')); if(!k) throw new Error('KMZ sin KML.'); gj=toGeoJSON.kml(kmlTextToDom(await zip.files[k].async('text'))); }
+  else if(lower.endsWith('.zip')) gj=await window.shp(await file.arrayBuffer());
+  else throw new Error('Formato no soportado.');
+  return extractPointFeaturesFromGeoJSON(gj);
+}
+async function importSvPoints(){
+  if(!(fb.admin||fb.supervisor)||!fb.db){ alert('Solo admin/supervisor con nube activa.'); return; }
+  const file=document.getElementById('svPointsFile')?.files?.[0]; if(!file){ alert('Seleccione archivo de puntos.'); return; }
+  const operation=(document.getElementById('svAdminOperation')?.value||currentOperation||'Cerro Corona').trim();
+  try{ const pts=await readPointFile(file); if(!pts.length){ alert('No se detectaron puntos.'); return; }
+    const payload={operation,source:file.name,updatedAt:isoLocal(new Date()),points:{}}; pts.forEach((p,i)=>payload.points[safeKey(p.name||('P'+(i+1)))]={...p,number:i+1});
+    await fb.db.ref('shearVanePlannedPoints/'+safeKey(operation)).set(payload); alert(`${pts.length} puntos SV guardados.`); renderSvPlannedPoints(payload);
+  }catch(e){ alert('Error importando puntos SV: '+e.message); }
+}
+function renderSvPlannedPoints(payload){
+  if(svPointLayer){ try{map.removeLayer(svPointLayer)}catch(e){} svPointLayer=null; }
+  if(!payload || !payload.points || !svPointsVisible) return;
+  const size=Math.max(8, Number(internalSettings.svMarkerSize)||18);
+  const fs=Math.max(7, Number(internalSettings.svLabelSize)||10);
+  const bg=internalSettings.svMarkerColor||'#7DCD00';
+  const fg=internalSettings.svTextColor||'#0f1a12';
+  svPointLayer=L.layerGroup();
+  Object.values(payload.points).forEach(p=>{
+    if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon))) return;
+    const html=`<span class="sv-point-label" style="width:${size}px;height:${size}px;background:${bg};color:${fg};font-size:${fs}px;line-height:${size}px;">${p.number||p.name}</span>`;
+    L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html,iconSize:[size,size],iconAnchor:[size/2,size/2]})}).bindTooltip(`${p.name||p.number}`,{sticky:true}).addTo(svPointLayer);
+  });
+  svPointLayer.addTo(map);
+}
+async function toggleSvPoints(){
+  svPointsVisible=!svPointsVisible;
+  if(!fb.db){ alert('Firebase no activo.'); return; }
+  const operation=(document.getElementById('svAdminOperation')?.value||currentOperation||'Cerro Corona').trim();
+  const snap=await fb.db.ref('shearVanePlannedPoints/'+safeKey(operation)).once('value'); renderSvPlannedPoints(snap.val());
+}
+function maxSvKpa(rec){ let m=0; Object.values(rec.readings||{}).forEach(r=>Object.values(r||{}).forEach(v=>{ const n=Number(v); if(Number.isFinite(n)) m=Math.max(m,n); })); return m; }
+async function showSvSmartMap(){
+  if(svTestLayer){ try{map.removeLayer(svTestLayer)}catch(e){} svTestLayer=null; }
+  if(!fb.db){ alert('Firebase no activo.'); return; }
+  const date=document.getElementById('svAdminDate')?.value||todayKey(); const snap=await fb.db.ref('shearVaneTests/'+date).once('value'); const data=snap.val()||{};
+  svTestLayer=L.layerGroup(); let n=0, alerts=0;
+  Object.values(data).forEach((r,i)=>{ if(!r.lat||!r.lon) return; const max=maxSvKpa(r), alert=max>35; if(alert) alerts++; n++; L.circleMarker([r.lat,r.lon],{radius:8,color:alert?'#ff0000':'#7DCD00',fillColor:alert?'#ff0000':'#7DCD00',fillOpacity:.8,weight:2}).bindPopup(`SV ${r.point||i+1}<br>Máx: ${max} kPa<br>${alert?'⚠ >35 kPa: no operar/revisar área':'OK'}`).addTo(svTestLayer); });
+  svTestLayer.addTo(map); document.getElementById('svAdminSummary').innerHTML=`SmartMap SV ${date}: ${n} punto(s), ${alerts} alerta(s) >35 kPa.`;
+}
+setTimeout(()=>{ const a=document.getElementById('btnImportSvPoints'); if(a)a.onclick=importSvPoints; const b=document.getElementById('btnShowSvPoints'); if(b)b.onclick=toggleSvPoints; const c=document.getElementById('btnShowSvSmartMap'); if(c)c.onclick=showSvSmartMap; },500);
+
+
 setTimeout(()=>{ classifyAdminStepCards(); setAdminSection('layout'); },300);
 
-if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW error',err)));}
+
+
+// =========================================================
+// PATCH: Configuraciones internas, alertas, resultados, Planet y banners
+let internalSettings={stopMin:20,stopSpeed:0.3,outZone:true,svKpa:40,bannerSec:120,svMarkerSize:18,svLabelSize:10,svMarkerColor:'#7DCD00',svTextColor:'#0f1a12'};
+let lastMachineMovingTs=Date.now();
+let lastAlertKeys={};
+function showTopBanner(msg, seconds){
+  const el=document.getElementById('topAlertBanner'); if(!el) return;
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(showTopBanner._t); showTopBanner._t=setTimeout(()=>el.classList.remove('show'), (seconds||internalSettings.bannerSec||120)*1000);
+}
+function loadInternalSettingsToInputs(){
+  const m={alertStopMin:'stopMin',alertStopSpeed:'stopSpeed',alertSvKpa:'svKpa',alertBannerSec:'bannerSec',svMarkerSize:'svMarkerSize',svLabelSize:'svLabelSize',svMarkerColor:'svMarkerColor',svTextColor:'svTextColor'};
+  Object.entries(m).forEach(([id,k])=>{const el=document.getElementById(id); if(el) el.value=internalSettings[k];});
+  const oz=document.getElementById('alertOutZone'); if(oz) oz.value=String(!!internalSettings.outZone);
+}
+function subscribeInternalSettings(){
+  if(!fb.db) return;
+  fb.db.ref('settings/internal').on('value',snap=>{ if(snap.exists()) internalSettings={...internalSettings,...snap.val()}; loadInternalSettingsToInputs(); });
+}
+async function saveInternalSettings(){
+  if(!fb.admin||!fb.db){ alert('Solo admin puede guardar configuraciones.'); return; }
+  internalSettings={
+    stopMin:Number(document.getElementById('alertStopMin')?.value)||20,
+    stopSpeed:Number(document.getElementById('alertStopSpeed')?.value)||0.3,
+    outZone:String(document.getElementById('alertOutZone')?.value)!=='false',
+    svKpa:Number(document.getElementById('alertSvKpa')?.value)||40,
+    bannerSec:Number(document.getElementById('alertBannerSec')?.value)||120,
+    svMarkerSize:Number(document.getElementById('svMarkerSize')?.value)||18,
+    svLabelSize:Number(document.getElementById('svLabelSize')?.value)||10,
+    svMarkerColor:document.getElementById('svMarkerColor')?.value||'#7DCD00',
+    svTextColor:document.getElementById('svTextColor')?.value||'#0f1a12'
+  };
+  await fb.db.ref('settings/internal').set(internalSettings);
+  document.getElementById('internalSettingsMsg').textContent='Configuraciones guardadas.';
+}
+function renderCriticalLayerList(){
+  const el=document.getElementById('criticalLayerList'); if(!el) return;
+  const rows=[];
+  Object.entries(sharedLayerData.kmls||{}).forEach(([id,k])=>rows.push(`<div class="layer-control-item"><span>KML ${k.name||id}</span><button onclick="toggleCriticalLayer('${id}')">${k.critical?'Quitar fija':'Fijar'}</button></div>`));
+  Object.entries(sharedLayerData.images||{}).forEach(([id,k])=>rows.push(`<div class="layer-control-item"><span>IMG ${k.name||id}</span><button onclick="toggleCriticalLayer('${id}')">${k.critical?'Quitar fija':'Fijar'}</button></div>`));
+  Object.entries(sharedLayerData.tifs||{}).forEach(([id,k])=>rows.push(`<div class="layer-control-item"><span>TIF ${k.name||id}</span><button onclick="toggleCriticalLayer('${id}')">${k.critical?'Quitar fija':'Fijar'}</button></div>`));
+  el.innerHTML=rows.join('')||'Sin capas cargadas.';
+}
+const _renderLayerControls2=renderLayerControls;
+renderLayerControls=function(data){ _renderLayerControls2(data); renderCriticalLayerList(); };
+async function pushOperationalAlert(type,msg,extra={}){
+  const now=Date.now(), k=type+'_'+(extra.maquina||'')+'_'+(extra.zoneKey||'');
+  if(lastAlertKeys[k] && now-lastAlertKeys[k]<5*60*1000) return;
+  lastAlertKeys[k]=now;
+  showTopBanner(msg, internalSettings.bannerSec);
+  if(fb.db){ await fb.db.ref('operationalAlerts/'+todayKey()).push({type,msg,createdAt:new Date().toISOString(),operation:currentOperation,...extra}); }
+}
+function pointInsideAnyOperationZone(ll){
+  for(const [zoneKey,z] of Object.entries(scopedLayouts(operationLayouts)||{})){
+    if(!z.polygon) continue;
+    const proj=makeProjector(z.polygon); if(pointInPolyXY(proj.toXY(ll), z.polygon.map(c=>proj.toXY(c)))) return {zoneKey,z};
+  }
+  return null;
+}
+async function checkRuntimeAlerts(ll,maquina,operador,kmh){
+  if(!jornadaActiva || !maquina) return;
+  if(Number(kmh)>internalSettings.stopSpeed) lastMachineMovingTs=Date.now();
+  const stoppedMin=(Date.now()-lastMachineMovingTs)/60000;
+  if(stoppedMin>=internalSettings.stopMin) await pushOperationalAlert('machine_stopped',`⚠ ${maquina} aparentemente detenida por ${Math.round(stoppedMin)} min. Contactar operador.`,{maquina,operador});
+  if(internalSettings.outZone && ll && !pointInsideAnyOperationZone(ll)) await pushOperationalAlert('out_of_zone',`⚠ ${maquina} fuera de zona operacional definida.`,{maquina,operador,lat:ll[0],lon:ll[1]});
+}
+async function updateResultsDashboard(){
+  const el=document.getElementById('resultsDashboard'); if(!el) return;
+  const from=document.getElementById('resDateFrom')?.value||todayKey();
+  const to=document.getElementById('resDateTo')?.value||from;
+  const op=(document.getElementById('resOperation')?.value||currentOperation||'').toLowerCase();
+  const vol=Number(document.getElementById('resVolume')?.value)||0;
+  let svCount=0, svHigh=0, crosses=0, lines=new Set();
+  const dates=[]; let d=new Date(from+'T00:00:00'); const end=new Date(to+'T00:00:00');
+  while(d<=end){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  for(const day of dates){
+    try{ const ev=(await fb.db.ref('passEvents/'+day).once('value')).val()||{}; Object.values(ev).forEach(e=>{ if(op && !String(e.operationName||'').toLowerCase().includes(op) && !String(e.operationCode||'').toLowerCase().includes(op)) return; crosses++; if(e.lineName) lines.add(e.lineName); }); }catch(e){}
+    try{ const sv=(await fb.db.ref('shearVaneTests/'+day).once('value')).val()||{}; Object.values(sv).forEach(r=>{ if(op && !String(r.operation||'').toLowerCase().includes(op)) return; svCount++; const nums=Object.values(r.readings||{}).flatMap(o=>Object.values(o||{}).map(Number)).filter(Number.isFinite); if(nums.length && Math.max(...nums)>=(internalSettings.svKpa||40)) svHigh++; }); }catch(e){}
+  }
+  el.innerHTML=`<div class="result-card"><b>Periodo:</b> ${from} a ${to}<br><b>Cruces operacionales:</b> ${crosses}<br><b>Líneas ejecutadas:</b> ${lines.size}<br><b>Shear Vane registrados:</b> ${svCount}<br><b>Alertas SV ≥ ${internalSettings.svKpa} kPa:</b> ${svHigh}<br><b>Liberación volumétrica informada:</b> ${vol.toLocaleString()} m³</div>`;
+  updateResultsDashboard._last={from,to,op,crosses,lines:lines.size,svCount,svHigh,volume_m3:vol};
+}
+function exportResultsCsv(){
+  const r=updateResultsDashboard._last; if(!r){ alert('Actualice resultados primero.'); return; }
+  const head=['fecha_desde','fecha_hasta','operacion','cruces','lineas','sv_count','sv_high','volume_m3'];
+  const row=[r.from,r.to,r.op,r.crosses,r.lines,r.svCount,r.svHigh,r.volume_m3];
+  downloadFile('resultados_operacionales.csv',[head,row].map(a=>a.join(',')).join('\n'),'text/csv');
+}
+async function savePlanetConfig(){
+  if(!fb.admin||!fb.db){alert('Solo admin.');return;}
+  await fb.db.ref('settings/planet').set({endpoint:document.getElementById('planetSyncEndpoint').value||'',operation:document.getElementById('planetOperation').value||''});
+  document.getElementById('planetSyncMsg').textContent='Configuración Planet guardada.';
+}
+async function planetSyncNow(){
+  const endpoint=document.getElementById('planetSyncEndpoint')?.value||''; if(!endpoint){alert('Ingrese un endpoint seguro.');return;}
+  document.getElementById('planetSyncMsg').textContent='Solicitando sincronización...';
+  try{ const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:document.getElementById('planetOperation')?.value||currentOperation})}); document.getElementById('planetSyncMsg').textContent='Respuesta: '+(await r.text()).slice(0,180); }
+  catch(e){ document.getElementById('planetSyncMsg').textContent='Error sync Planet: '+e.message; }
+}
+setTimeout(()=>{
+  document.getElementById('btnSaveInternalSettings')?.addEventListener('click',saveInternalSettings);
+  document.getElementById('btnUpdateResults')?.addEventListener('click',updateResultsDashboard);
+  document.getElementById('btnExportResultsCsv')?.addEventListener('click',exportResultsCsv);
+  document.getElementById('btnSavePlanetConfig')?.addEventListener('click',savePlanetConfig);
+  document.getElementById('btnPlanetSyncNow')?.addEventListener('click',planetSyncNow);
+  subscribeInternalSettings(); loadInternalSettingsToInputs();
+},600);
+
+// Mostrar mensajes enviados por admin/supervisor como banner superior por 2 min.
+let lastNotificationBannerId=null;
+const _renderNotificationsPatch=renderNotifications;
+renderNotifications=function(){
+  _renderNotificationsPatch();
+  const rows=Object.entries(notificationsCache||{}).map(([id,n])=>({id,...n})).filter(n=>!n.operation||n.operation==='ALL'||n.operation===currentOperation).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  const latest=rows[0];
+  if(latest && latest.id!==lastNotificationBannerId){ lastNotificationBannerId=latest.id; showTopBanner('📢 '+(latest.text||''), internalSettings.bannerSec||120); }
+};
+
+// Hook de alertas GPS en watchPosition: se llama desde processControlLineCrossings wrapper.
+const _processControlLineCrossings=processControlLineCrossings;
+processControlLineCrossings=async function(prevLL,currLL,maquina,operador,kmh){
+  await checkRuntimeAlerts(currLL,maquina,operador,kmh);
+  return _processControlLineCrossings(prevLL,currLL,maquina,operador,kmh);
+};
+
+// Alertar SV alto al guardar.
+const _saveShearVane=saveShearVane;
+saveShearVane=async function(){
+  await _saveShearVane();
+  try{
+    const vals=Object.values(collectShearValues()||{}).flatMap(o=>Object.values(o||{}).map(Number)).filter(Number.isFinite);
+    const mx=vals.length?Math.max(...vals):null;
+    if(mx!==null && mx>=(internalSettings.svKpa||40)) await pushOperationalAlert('sv_high',`⚠ Shear Vane alto (${mx} kPa). Evitar operar en el área hasta revisión.`,{maquina:document.getElementById('svMachine')?.value||'',operador:document.getElementById('svOperator')?.value||'',svMax:mx});
+  }catch(e){}
+};
+if(document.getElementById('btnSaveShearVane')) document.getElementById('btnSaveShearVane').onclick=saveShearVane;
 
 
 
 
 // =========================================================
-// PATCH Capas/Mapas base por operación
+// PATCH 2026-07-06: operación con pausa, visualización operador, carpetas nube y topografía 4326
 (function(){
-  let layerKmlFiles=[], layerTifFiles=[], layerImgFiles=[];
-  function el(id){ return document.getElementById(id); }
-  if(!window.layerMatchesScope){
-    window.layerMatchesScope=function(layer){
-      if(!layer) return true;
-      if(fb && fb.admin && !fb.supervisor) return true;
-      const op=(fb && fb.supervisor && fb.supervisorOperation) ? fb.supervisorOperation : (currentOperation || 'Cerro Corona');
-      return !layer.operation || layer.operation==='ALL' || layer.operation===op || layer.operationCode===(OPERATION_PROFILES[op]?.code);
+  // --- UI: botón Pausa/Almuerzo y nota topografía EPSG:4326 ---
+  const btnEnd = document.getElementById('btnEnd');
+  if(btnEnd && !document.getElementById('btnPauseLunch')){
+    const b=document.createElement('button');
+    b.id='btnPauseLunch';
+    b.className='btn-warn';
+    b.disabled=true;
+    b.textContent='⏸ Pausa / Almuerzo';
+    b.style.marginTop='6px';
+    btnEnd.insertAdjacentElement('afterend', b);
+  }
+  const topografiaSection = document.querySelector('[data-admin-section="topografia"]') || document.getElementById('topografiaPanel') || null;
+  const topoBtn = document.querySelector('[data-section="topografia"]');
+  if(topoBtn) topoBtn.title='Comparación topográfica: usar rasters EPSG:4326 para estandarizar entre operaciones.';
+  if(!document.getElementById('topografia4326Note')){
+    const target = Array.from(document.querySelectorAll('.admin-section,.step-card')).find(el=>/Topograf/i.test(el.textContent||''));
+    if(target){
+      const note=document.createElement('div'); note.id='topografia4326Note'; note.className='admin-map-note';
+      note.innerHTML='<b>Topografía estándar:</b> cargar rasters en <b>EPSG:4326 / WGS84</b>. El análisis de cut/fill usa diferencia Actual - Anterior por área operacional. <b>Fill</b> = elevación positiva/acumulación; <b>Cut</b> = elevación negativa/remoción o descenso.';
+      target.insertBefore(note, target.firstChild);
+    }
+  }
+
+  // --- Mostrar líneas operativas por defecto para operadores, pero sin intensidad operacional ---
+  const opToggle=document.getElementById('operatorShowLayout');
+  if(opToggle && localStorage.getItem('operatorShowLayoutDefaulted')!=='1'){
+    opToggle.checked=true; localStorage.setItem('operatorShowLayoutDefaulted','1');
+  } else if(opToggle && localStorage.getItem('operatorShowLayoutDefaulted')==='1' && localStorage.getItem('operatorShowLayout')!==null){
+    opToggle.checked=localStorage.getItem('operatorShowLayout')==='true';
+  }
+  if(opToggle){ opToggle.addEventListener('change',()=>localStorage.setItem('operatorShowLayout', String(opToggle.checked))); }
+
+  // Guardar también en estructura de nube por operación para organización mundial.
+  const _saveSessionPatch = saveSession;
+  saveSession = async function(record){
+    await _saveSessionPatch(record);
+    try{
+      if(!fb.db||!FIREBASE_ENABLED) return;
+      const opName=(document.getElementById('activeOperation')?.value)||currentOperation||'General';
+      const opCode=(OPERATION_PROFILES[opName]?.code)||makeOperationCode(opName)||'GEN';
+      const key=safeKey(record.maquina)+'_'+record.startFile;
+      await fb.db.ref(`operations/${opCode}/sessions/${key}`).set({...record,operation:opName,operationCode:opCode});
+    }catch(e){console.warn('No se pudo guardar sesión en carpeta de operación',e);}
+  };
+
+  // --- Pausa/almuerzo ---
+  window.trackingPaused=false;
+  window.pauseEvents=[];
+  function setPauseUI(paused){
+    const b=document.getElementById('btnPauseLunch'); if(!b) return;
+    b.textContent = paused ? '▶ Reanudar operación' : '⏸ Pausa / Almuerzo';
+    b.className = paused ? 'btn-outline' : 'btn-warn';
+    const st=document.getElementById('status');
+    if(st && jornadaActiva){ st.textContent = paused ? 'Jornada en pausa / almuerzo' : 'Jornada en curso - GPS activo'; st.className = paused ? 'status-warn' : 'status-live'; }
+  }
+  document.getElementById('btnPauseLunch')?.addEventListener('click', async ()=>{
+    if(!jornadaActiva) return;
+    window.trackingPaused=!window.trackingPaused;
+    window.pauseEvents.push({ts:new Date().toISOString(),paused:window.trackingPaused});
+    if(window.trackingPaused){ lastLatLng=null; prevTs=null; }
+    setPauseUI(window.trackingPaused);
+    try{
+      if(fb.db && currentMachine){
+        await fb.db.ref(`fleet/${safeKey(currentMachine)}/paused`).set(window.trackingPaused);
+        await fb.db.ref(`fleet/${safeKey(currentMachine)}/pauseUpdatedAt`).set(new Date().toISOString());
+      }
+    }catch(e){}
+  });
+
+  // --- Render de layouts: operador ve líneas base; admin/sup ve intensidad por franjas ---
+  renderOperationLayouts = function(){
+    Object.values(operationLayoutLayers).forEach(g=>{try{map.removeLayer(g)}catch(e){}}); operationLayoutLayers={};
+    const show=document.getElementById('showControlLines');
+    const operatorToggle=document.getElementById('operatorShowLayout');
+    const isAdminView=!!(fb.admin||fb.supervisor);
+    const allowView = isAdminView || (operatorToggle && operatorToggle.checked);
+    const legend=document.getElementById('passColorLegend'); if(legend) legend.style.display=isAdminView?'block':'none';
+    if(!allowView) return;
+    if(isAdminView && show && !show.checked) return;
+    Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
+      if(!zoneVisible(zoneKey)) return;
+      const group=L.layerGroup();
+      if(z.polygon) L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);
+      const vals=Object.entries(z.lines||{});
+      if(isAdminView){
+        for(let i=0;i<vals.length-1;i++){
+          const [lk1,l1]=vals[i], [lk2,l2]=vals[i+1];
+          const c1=getLineTotalCount(zoneKey,lk1), c2=getLineTotalCount(zoneKey,lk2);
+          const stripCount=Math.min(c1,c2);
+          if(stripCount>0){
+            const stripColor=lineColorByCount(stripCount, getZoneBaseColor(z));
+            L.polygon([l1.a,l1.b,l2.b,l2.a],{className:'operation-line-strip',color:stripColor,weight:0,fillColor:stripColor,fillOpacity:0.36,interactive:false}).addTo(group);
+          }
+        }
+      }
+      vals.forEach(([lk,l],idx)=>{
+        const cnt=getLineTotalCount(zoneKey,lk);
+        const color=getZoneBaseColor(z);
+        const pl=L.polyline([l.a,l.b],{color,weight:isAdminView?1.2:1.6,opacity:isAdminView?.82:.92});
+        pl.bindTooltip(`${l.name}${isAdminView?` · cruces: ${cnt}`:''}`,{sticky:true});
+        if(isAdminView) pl.on('click',()=>manualLineClick(zoneKey,lk,l));
+        pl.addTo(group);
+        if(idx===0 || (idx+1)%5===0){
+          const label=String(idx+1);
+          const cls=isAdminView?(cnt>=3?'done3':(cnt===2?'done2':(cnt===1?'done1':''))):'';
+          L.marker(lineMidLL(l),{interactive:false,icon:L.divIcon({className:'',html:`<span class="line-label ${cls}">${label}</span>`,iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group);
+        }
+      });
+      if(isAdminView && z.show_start_line!==false && z.start_line && z.start_line.length>=2){
+        L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip(`${layoutDisplayName(z,zoneKey)} · INICIO`,{sticky:true}).addTo(group);
+        L.marker(z.start_line[Math.floor(z.start_line.length/2)],{interactive:false,icon:L.divIcon({className:'',html:`<span class="param-label">INICIO</span>`,iconSize:[58,16],iconAnchor:[29,-8]})}).addTo(group);
+      }
+      if(isAdminView && z.show_end_line!==false && z.end_line && z.end_line.length>=2){
+        L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip(`${layoutDisplayName(z,zoneKey)} · FINAL`,{sticky:true}).addTo(group);
+        L.marker(z.end_line[Math.floor(z.end_line.length/2)],{interactive:false,icon:L.divIcon({className:'',html:`<span class="param-label">FINAL</span>`,iconSize:[58,16],iconAnchor:[29,-8]})}).addTo(group);
+      }
+      group.addTo(map); operationLayoutLayers[zoneKey]=group;
+    });
+  };
+
+  // --- Reemplazar tracking con pausa real ---
+  document.getElementById('btnStart').onclick=async()=>{
+    if(jornadaActiva)return;
+    const operador=document.getElementById('operador').value.trim(), maquina=document.getElementById('maquina').value.trim();
+    if(!operador||!maquina){alert('Ingrese operador y MMn° antes de iniciar.');return;}
+    if(!navigator.geolocation){document.getElementById('gpsWarning').style.display='block';alert('Este dispositivo no soporta geolocalización.');return;}
+    try{await ensureAnonymous();}catch(e){}
+    jornadaActiva=true; window.trackingPaused=false; window.pauseEvents=[]; currentMachine=maquina; trackPoints=[]; totalDist=0; lastLatLng=null; prevTs=null; startTime=new Date();
+    document.getElementById('dOperador').textContent=operador; document.getElementById('dMaquina').textContent=maquina; document.getElementById('dInicio').textContent=isoLocal(startTime);
+    document.getElementById('status').textContent='Jornada en curso - GPS activo'; document.getElementById('status').className='status-live'; document.getElementById('gpsWarning').style.display='none';
+    document.getElementById('btnStart').disabled=true; document.getElementById('btnStart').textContent='🔒 Jornada en curso'; document.getElementById('btnEnd').disabled=false; document.getElementById('btnPauseLunch').disabled=false;
+    document.getElementById('operador').disabled=true; document.getElementById('maquina').disabled=true; setPauseUI(false);
+    const ownColor=colorForMachine(maquina); if(polyline)map.removeLayer(polyline); if(ownMarker)map.removeLayer(ownMarker);
+    polyline=L.polyline([],{color:ownColor,weight:5,opacity:1}).addTo(map);
+    ownMarker=L.marker([-33.45,-70.65],{icon:L.divIcon({className:'',html:`<div style="background:${ownColor};width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.7)"></div>`,iconSize:[16,16]})}).addTo(map);
+    ownMarker.bindTooltip('',{permanent:true,direction:'top',offset:[0,-12],className:'live-badge'});
+    timerInterval=setInterval(()=>document.getElementById('dTiempo').textContent=fmtTime((new Date()-startTime)/1000),1000);
+    watchId=navigator.geolocation.watchPosition(async pos=>{
+      if(window.trackingPaused){ return; }
+      const {latitude,longitude,speed}=pos.coords, ll=[latitude,longitude], prevLL=lastLatLng?[lastLatLng[0],lastLatLng[1]]:null, kmh=speed?(speed*3.6):(lastLatLng?estimateSpeed(lastLatLng,ll):0);
+      if(lastLatLng) totalDist+=map.distance(lastLatLng,ll)/1000;
+      lastLatLng=ll;
+      trackPoints.push({lat:latitude,lon:longitude,ts:new Date().toISOString(),speed:Number(kmh.toFixed(1)),maquina,operador,operation:document.getElementById('activeOperation')?.value||currentOperation});
+      ownMarker.setLatLng(ll); polyline.addLatLng(ll); map.panTo(ll);
+      const elapsed=fmtTime((new Date()-startTime)/1000);
+      ownMarker.setTooltipContent(`<b>${maquina}</b><br>${operador}<br>${kmh.toFixed(1)} km/h · ${totalDist.toFixed(1)} km<br>${elapsed}`);
+      document.getElementById('dSpeed').textContent=kmh.toFixed(1)+' km/h'; document.getElementById('dDist').textContent=totalDist.toFixed(2)+' km'; document.getElementById('dPuntos').textContent=trackPoints.length;
+      upsertFleetLayer(maquina,trackPoints,operador,true); await publishFleet(maquina,operador,trackPoints,true); await processControlLineCrossings(prevLL,ll,maquina,operador,kmh);
+    },err=>{document.getElementById('gpsWarning').style.display='block';alert('Error GPS: '+err.message);},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+  };
+
+  document.getElementById('btnEnd').onclick=async()=>{
+    if(watchId!==null) navigator.geolocation.clearWatch(watchId); clearInterval(timerInterval); jornadaActiva=false; window.trackingPaused=false; endTime=new Date();
+    document.getElementById('status').textContent='Jornada finalizada'; document.getElementById('status').className='status-off';
+    document.getElementById('btnStart').disabled=false; document.getElementById('btnStart').textContent='▶ Iniciar Día'; document.getElementById('btnEnd').disabled=true; const pb=document.getElementById('btnPauseLunch'); if(pb){pb.disabled=true; pb.textContent='⏸ Pausa / Almuerzo';}
+    document.getElementById('operador').disabled=false; document.getElementById('maquina').disabled=false;
+    const operador=document.getElementById('operador').value, maquina=document.getElementById('maquina').value;
+    const startFile=fileDate(startTime||new Date()), endFile=fileDate(endTime); const kml=buildKML(trackPoints,operador,maquina,startTime,endTime,totalDist); const filename=`recorrido_${safeKey(maquina)}_${startFile}_${endFile}.kml`;
+    const opName=(document.getElementById('activeOperation')?.value)||currentOperation||'General'; const opCode=(OPERATION_PROFILES[opName]?.code)||makeOperationCode(opName)||'GEN';
+    const record={id:Date.now(),filename,fecha:isoLocal(endTime),startISO:startTime?startTime.toISOString():null,endISO:endTime.toISOString(),startFile,endFile,operador,maquina,operation:opName,operationCode:opCode,puntos:trackPoints.length,distancia:totalDist.toFixed(2),pauseEvents:window.pauseEvents||[],points:trackPoints,kml};
+    const db=JSON.parse(localStorage.getItem('trackerDB')||'[]'); db.push(record); localStorage.setItem('trackerDB',JSON.stringify(db));
+    await publishFleet(maquina,operador,trackPoints,false);
+    if(polyline){try{map.removeLayer(polyline)}catch(e){} polyline=null;} if(ownMarker){try{map.removeLayer(ownMarker)}catch(e){} ownMarker=null;} currentMachine=null;
+    await saveSession(record); downloadFile(filename,kml); renderHistory();
+  };
+
+  // --- Duplicar eventos de cruce en carpeta de operación para consulta futura ---
+  const _processForFolders = processControlLineCrossings;
+  processControlLineCrossings = async function(prevLL,currLL,maquina,operador,kmh){
+    const before = Date.now();
+    const ret = await _processForFolders(prevLL,currLL,maquina,operador,kmh);
+    try{
+      if(!fb.db||!currLL) return ret;
+      const opName=(document.getElementById('activeOperation')?.value)||currentOperation||'General';
+      const opCode=(OPERATION_PROFILES[opName]?.code)||makeOperationCode(opName)||'GEN';
+      // Marcador liviano de actividad diaria por operación/MM; los eventos detallados siguen en passEvents/yyyy-mm-dd.
+      await fb.db.ref(`operations/${opCode}/dailyActivity/${todayKey()}/${safeKey(maquina)}`).update({maquina,operador,operation:opName,operationCode:opCode,lastUpdate:new Date().toISOString()});
+    }catch(e){}
+    return ret;
+  };
+
+  // Render inicial después del patch.
+  setTimeout(()=>{ try{renderOperationLayouts();}catch(e){} },800);
+})();
+
+
+
+// =========================================================
+// PATCH 2026-07-06B: supervisores por operación, vista seguimiento y track por línea
+(function(){
+  function scopedOperation(){
+    return (fb && fb.supervisor && fb.supervisorOperation) ? fb.supervisorOperation : (currentOperation || 'Cerro Corona');
+  }
+  window.scopedLayouts = function(layouts){
+    const op=scopedOperation();
+    if(!layouts) return {};
+    // Admin ve todas las operaciones. Supervisor y operador solo ven la operación activa/asignada.
+    if(fb && fb.admin && !fb.supervisor) return layouts;
+    const out={};
+    Object.entries(layouts||{}).forEach(([k,z])=>{
+      if(!z || !z.operation_name || z.operation_name===op || z.operation_code===(OPERATION_PROFILES[op]?.code)) out[k]=z;
+    });
+    return out;
+  };
+  window.layerMatchesScope = function(layer){
+    if(!layer) return true;
+    if(fb && fb.admin && !fb.supervisor) return true;
+    const op=scopedOperation();
+    return !layer.operation || layer.operation==='ALL' || layer.operation===op || layer.operationCode===(OPERATION_PROFILES[op]?.code);
+  };
+  window.machineMatchesOperation = function(machine, op){
+    const prof=OPERATION_PROFILES[op]||{};
+    return !prof.machines || !prof.machines.length || prof.machines.includes(machine);
+  };
+
+  // Reemplazar login supervisor para asignar operación fija.
+  const supBtn=document.getElementById('btnSupervisorLogin');
+  if(supBtn){
+    supBtn.onclick=async()=>{
+      if(!FIREBASE_ENABLED){alert('Primero debe configurar Firebase dentro del HTML.');return;}
+      const email=document.getElementById('supervisorEmail').value.trim();
+      const pass=document.getElementById('supervisorPass').value;
+      const op=document.getElementById('supervisorOperation')?.value || 'Cerro Corona';
+      try{
+        await firebase.auth().signInWithEmailAndPassword(email,pass);
+        fb.supervisor=true; fb.supervisorOperation=op; fb.admin=false;
+        setCurrentOperation(op);
+        const active=document.getElementById('activeOperation'); if(active){ active.value=op; active.disabled=true; }
+        supervisorModal.classList.remove('open');
+        document.getElementById('supervisorReportBtn').style.display='block';
+        document.getElementById('supervisorLoginMsg').textContent='';
+        openAdminRight(); renderAllSharedLayers(sharedLayerData); renderLayerControls(sharedLayerData); renderOperationLayouts(); renderOperationTree(); renderPassSummary();
+      }catch(e){document.getElementById('supervisorLoginMsg').textContent='Error supervisor: '+e.message;}
     };
   }
-  function selectedLayerOperation(){ return el('layerUploadOperation')?.value || currentOperation || 'Cerro Corona'; }
-  function selectedLayerCode(op){ return (OPERATION_PROFILES[op]?.code)||makeOperationCode(op)||'GEN'; }
-  function layerCritical(){ return !!el('layerUploadCritical')?.checked; }
-  function layerDesc(){ return (el('layerUploadDescription')?.value||'').trim(); }
-  window.toggleLayerLibraryOp=function(node){ const box=node.closest('.layer-library-op'); if(box) box.classList.toggle('open'); };
-  window.exportLayerMeta=function(id){ const m=getSharedLayerMeta(id); if(!m||!m.name){alert('No encontré la capa.');return;} downloadFile(`metadata_${safeKey(m.operation||'op')}_${safeKey(m.name)}.json`, JSON.stringify(m,null,2)); };
-  window.renderLayerLibrary=function(data){
-    const wrap=el('layerLibraryTree'); if(!wrap) return;
-    data=data||sharedLayerData||{}; const groups={};
-    function add(type,id,l){ const op=l.operation||'Sin operación'; if(!groups[op]) groups[op]={KML:[],TIF:[],IMG:[]}; groups[op][type].push({id,...l}); }
-    Object.entries(data.kmls||{}).forEach(([id,l])=>add('KML',id,l)); Object.entries(data.tifs||{}).forEach(([id,l])=>add('TIF',id,l)); Object.entries(data.images||{}).forEach(([id,l])=>add('IMG',id,l));
-    const ops=Object.keys(groups).sort(); if(!ops.length){wrap.innerHTML='<div class="small">Sin capas guardadas.</div>';return;}
-    wrap.innerHTML=ops.map(op=>{ const g=groups[op]; const total=g.KML.length+g.TIF.length+g.IMG.length;
-      const body=['IMG','KML','TIF'].map(type=>{ const arr=g[type]||[]; if(!arr.length)return ''; const title=type==='IMG'?'Fotos / ortofotos':type==='KML'?'KML / KMZ':'TIF / GeoTIFF';
-        return `<div class="layer-type-title">${title}</div>`+arr.map(l=>{ const checked=isLayerVisible(l.id)?'checked':''; const fixed=l.critical?'🔒':''; return `<div class="layer-row-qgis"><input type="checkbox" ${checked} onchange="toggleSharedLayer('${l.id}', this.checked)"><div><b>${fixed} ${l.name||l.id}</b><br><span class="small">${l.description||''} ${l.updatedAt||''}</span></div><div class="layer-actions"><button class="btn-outline" onclick="zoomToSharedLayer('${l.id}')">Zoom</button><button class="btn-outline" onclick="exportLayerMeta('${l.id}')">Meta</button>${fb.admin&&!l.critical?`<button class="btn-danger" onclick="deleteSharedLayer('${l.id}')">Borrar</button>`:''}</div></div>`; }).join('');
-      }).join('');
-      return `<div class="layer-library-op"><div class="layer-library-head" onclick="toggleLayerLibraryOp(this)"><span>📁 ${op}</span><span>${total} capas</span></div><div class="layer-library-body">${body}</div></div>`;
-    }).join('');
+
+  // Forzar operación del supervisor si intenta cambiar selector.
+  const _setCurrentOperation=setCurrentOperation;
+  window.setCurrentOperation=function(op){
+    if(fb && fb.supervisor && fb.supervisorOperation) op=fb.supervisorOperation;
+    return _setCurrentOperation(op);
   };
-  function meta(){ const op=selectedLayerOperation(); return {operation:op,operationCode:selectedLayerCode(op),description:layerDesc(),critical:layerCritical()}; }
-  if(el('layerKmlInput')) el('layerKmlInput').onchange=e=>layerKmlFiles=Array.from(e.target.files||[]);
-  if(el('layerTifInput')) el('layerTifInput').onchange=e=>layerTifFiles=Array.from(e.target.files||[]);
-  if(el('layerImgInput')) el('layerImgInput').onchange=e=>layerImgFiles=Array.from(e.target.files||[]);
-  if(el('btnRefreshLayerLibrary')) el('btnRefreshLayerLibrary').onclick=()=>renderLayerLibrary(sharedLayerData);
-  if(el('btnLayerUploadKml')) el('btnLayerUploadKml').onclick=async()=>{ if(!fb.admin){alert('Debe entrar como admin.');return;} if(!layerKmlFiles.length){alert('Seleccione KML/KMZ.');return;} const old=currentOperation, m=meta(); currentOperation=m.operation; try{ for(const f of layerKmlFiles){ await uploadKmlFile(f); } alert('KML/KMZ cargado para '+m.operation); el('layerKmlInput').value=''; layerKmlFiles=[]; }catch(e){alert('Error: '+e.message);} finally{currentOperation=old;} };
-  if(el('btnLayerUploadTif')) el('btnLayerUploadTif').onclick=async()=>{ if(!fb.admin){alert('Debe entrar como admin.');return;} if(!layerTifFiles.length){alert('Seleccione TIF.');return;} const m=meta(); try{ for(const file of layerTifFiles){ const id=layerId('tif', file.name); const path='sharedLayers/tifs/'+id+'_'+file.name; const ref=fb.storage.ref(path); await ref.put(file,{contentType:'image/tiff'}); const url=await ref.getDownloadURL(); await fb.db.ref('sharedLayers/tifs/'+id).set({name:file.name,path,url,size:file.size,updatedAt:isoLocal(new Date()),updatedBy:fb.auth.currentUser.email||fb.auth.currentUser.uid,...m}); } alert('TIF cargado para '+m.operation); el('layerTifInput').value=''; layerTifFiles=[]; }catch(e){alert('Error: '+e.message);} };
-  if(el('btnLayerUploadImg')) el('btnLayerUploadImg').onclick=async()=>{ if(!fb.admin){alert('Debe entrar como admin.');return;} if(!layerImgFiles.length){alert('Seleccione JPG/PNG.');return;} const north=Number(el('layerImgLatN').value), south=Number(el('layerImgLatS').value), west=Number(el('layerImgLonW').value), east=Number(el('layerImgLonE').value); if(![north,south,west,east].every(Number.isFinite)||!(north>south)||!(east>west)){alert('Revise coordenadas WGS84.');return;} const m=meta(); try{ for(const file of layerImgFiles){ const id=layerId('img', file.name); const ext=(file.name.split('.').pop()||'png').toLowerCase(); const path='sharedLayers/images/'+id+'_'+file.name; const ref=fb.storage.ref(path); const contentType=ext==='jpg'||ext==='jpeg'?'image/jpeg':'image/png'; await ref.put(file,{contentType}); const url=await ref.getDownloadURL(); await fb.db.ref('sharedLayers/images/'+id).set({name:file.name,path,url,size:file.size,bounds:{north,south,west,east},updatedAt:isoLocal(new Date()),updatedBy:fb.auth.currentUser.email||fb.auth.currentUser.uid,...m}); } alert('Imagen cargada para '+m.operation); el('layerImgInput').value=''; layerImgFiles=[]; }catch(e){alert('Error: '+e.message);} };
-  setTimeout(()=>renderLayerLibrary(sharedLayerData),1000);
+
+  // Filtro de flota en el render: supervisor solo ve máquinas de su operación.
+  const _upsertFleetLayer=upsertFleetLayer;
+  window.upsertFleetLayer=function(machine,points,operador,live){
+    const op=(points && points.length && points[points.length-1].operation) || '';
+    const scope=scopedOperation();
+    if(fb && fb.supervisor){
+      if((op && op!==scope) || (!op && !machineMatchesOperation(machine,scope))){ removeFleetLayer(machine); return; }
+    }
+    return _upsertFleetLayer(machine,points,operador,live);
+  };
+
+  // Filtro de capas operacionales por operación.
+  const _renderLayerControls=renderLayerControls;
+  window.renderLayerControls=function(data){
+    if(!data) return _renderLayerControls(data);
+    if(fb && fb.admin && !fb.supervisor) return _renderLayerControls(data);
+    const filtered={kmls:{},tifs:{},images:{}};
+    ['kmls','tifs','images'].forEach(t=>Object.entries(data[t]||{}).forEach(([id,l])=>{ if(layerMatchesScope(l)) filtered[t][id]=l; }));
+    return _renderLayerControls(filtered);
+  };
+  const _renderAllSharedLayers=renderAllSharedLayers;
+  window.renderAllSharedLayers=function(data){
+    const filtered={kmls:{},tifs:{},images:{}};
+    ['kmls','tifs','images'].forEach(t=>Object.entries((data||{})[t]||{}).forEach(([id,l])=>{ if(layerMatchesScope(l)) filtered[t][id]=l; }));
+    return _renderAllSharedLayers(filtered);
+  };
+
+  // Mensajes: supervisor no puede enviar a ALL, queda limitado a su operación.
+  const sendNotice=document.getElementById('btnSendNotice');
+  if(sendNotice){
+    sendNotice.onclick=async()=>{
+      if(!(fb.admin||fb.supervisor)||!fb.db){ alert('Solo admin/supervisor con nube activa.'); return; }
+      const text=(document.getElementById('noticeText').value||'').trim(); if(!text){ alert('Ingrese mensaje.'); return; }
+      let operation=document.getElementById('noticeOperation').value||'ALL';
+      if(fb.supervisor && fb.supervisorOperation) operation=fb.supervisorOperation;
+      await fb.db.ref('notifications').push({operation,text,createdAt:isoLocal(new Date()),author:(fb.auth.currentUser&&(fb.auth.currentUser.email||fb.auth.currentUser.uid))||'usuario'});
+      document.getElementById('noticeText').value=''; document.getElementById('noticeAdminMsg').textContent='Mensaje enviado a '+operation+'.';
+    };
+  }
+
+  // Botón de vista seguimiento tipo Waze/Google Maps.
+  const btnEnd=document.getElementById('btnEnd');
+  if(btnEnd && !document.getElementById('followGpsBtn')){
+    const b=document.createElement('button'); b.id='followGpsBtn'; b.disabled=true; b.textContent='🧭 Vista seguimiento';
+    btnEnd.insertAdjacentElement('afterend', b);
+  }
+  const mapDiv=document.getElementById('map');
+  if(mapDiv && !document.getElementById('followPanel')){
+    const panel=document.createElement('div'); panel.id='followPanel';
+    panel.innerHTML='<div id="followPanelHeader"><span>Seguimiento GPS</span><button id="btnCloseFollow">Cerrar</button></div><div id="followMap"></div>';
+    mapDiv.appendChild(panel);
+  }
+  let followMap=null, followMarker=null, followBase=null, followMode=false;
+  function initFollowMap(){
+    if(followMap) return;
+    followMap=L.map('followMap',{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,tap:false}).setView(map.getCenter(),18);
+    followBase=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20}).addTo(followMap);
+    followMarker=L.marker(map.getCenter(),{icon:L.divIcon({className:'',html:'<div style="background:#7DCD00;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px #000"></div>',iconSize:[18,18]})}).addTo(followMap);
+  }
+  function setFollowMode(on){
+    followMode=!!on; document.getElementById('followPanel')?.classList.toggle('open',followMode);
+    const b=document.getElementById('followGpsBtn'); if(b) b.textContent=followMode?'🧭 Cerrar seguimiento':'🧭 Vista seguimiento';
+    if(followMode){ initFollowMap(); setTimeout(()=>followMap.invalidateSize(),200); }
+  }
+  document.getElementById('followGpsBtn')?.addEventListener('click',()=>setFollowMode(!followMode));
+  document.getElementById('btnCloseFollow')?.addEventListener('click',()=>setFollowMode(false));
+
+  // Track diario coloreado por línea operacional más cercana.
+  const lineTrackPalette=['#00e5ff','#2979ff','#7c4dff','#ff00ff','#ff4081','#ff1744','#ff6d00','#ffd600','#76ff03','#00c853','#00bfa5','#18ffff'];
+  function hashColor(s){ let h=0; String(s||'').split('').forEach(ch=>h=(h*31+ch.charCodeAt(0))&0xfffffff); return lineTrackPalette[Math.abs(h)%lineTrackPalette.length]; }
+  function nearestOperationalLineColor(a,b){
+    if(!a||!b||!controlLineIndex||!controlLineIndex.length) return currentMachine?colorForMachine(currentMachine):'#7DCD00';
+    let best=null,bestD=Infinity;
+    for(const l of controlLineIndex){
+      if(l.kind!=='operational') continue;
+      if(fb && fb.supervisor && l.operationName!==scopedOperation()) continue;
+      const p=l.proj.toXY([(a[0]+b[0])/2,(a[1]+b[1])/2]);
+      const d=distPointToSegment(p,l.a,l.b);
+      if(d<bestD){bestD=d; best=l;}
+    }
+    return best && bestD<25 ? hashColor(best.lineName||best.lineKey) : (currentMachine?colorForMachine(currentMachine):'#7DCD00');
+  }
+  let trackSegmentLayers=[], processedTrackIdx=0;
+  function clearDailyColoredTrack(){ trackSegmentLayers.forEach(l=>{try{map.removeLayer(l)}catch(e){}}); trackSegmentLayers=[]; processedTrackIdx=0; }
+  setInterval(()=>{
+    const followBtn=document.getElementById('followGpsBtn'); if(followBtn) followBtn.disabled=!jornadaActiva;
+    if(!jornadaActiva){ if(trackSegmentLayers.length) clearDailyColoredTrack(); return; }
+    if(polyline){ try{ polyline.setStyle({opacity:.15,weight:2}); }catch(e){} }
+    while(trackPoints && processedTrackIdx < trackPoints.length-1){
+      const p1=trackPoints[processedTrackIdx], p2=trackPoints[processedTrackIdx+1];
+      const a=[p1.lat,p1.lon], b=[p2.lat,p2.lon];
+      const col=nearestOperationalLineColor(a,b);
+      const seg=L.polyline([a,b],{color:col,weight:5,opacity:.95}).addTo(map);
+      trackSegmentLayers.push(seg); processedTrackIdx++;
+    }
+    if(followMode && trackPoints && trackPoints.length){
+      const p=trackPoints[trackPoints.length-1], ll=[p.lat,p.lon];
+      initFollowMap(); followMarker.setLatLng(ll); followMap.setView(ll,18,{animate:false});
+    }
+  },1200);
+
+  // Al finalizar, limpiar track coloreado y cerrar seguimiento.
+  const _endClick=document.getElementById('btnEnd')?.onclick;
+  if(_endClick){ document.getElementById('btnEnd').onclick=async function(){ await _endClick.apply(this,arguments); clearDailyColoredTrack(); setFollowMode(false); }; }
+
+  // Ajustes visuales y texto de ayuda.
+  setTimeout(()=>{
+    const opSel=document.getElementById('noticeOperation');
+    if(opSel && fb && fb.supervisor && fb.supervisorOperation){ opSel.value=fb.supervisorOperation; opSel.disabled=true; }
+    const dash=document.querySelector('.dash');
+    if(dash && !document.getElementById('trackLineLegendText')){
+      const n=document.createElement('div'); n.id='trackLineLegendText'; n.className='track-line-legend'; n.textContent='Durante la jornada, el track diario se colorea según la línea operacional más cercana.'; dash.insertAdjacentElement('afterend',n);
+    }
+  },800);
+})();
+
+
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW error',err)));}
+
+
+// =========================================================
+// PATCH 2026-07-06: notificaciones 2 min exactos, lectura/reacción, rotación 360, SV configurable
+(function(){
+  const NOTIF_SEEN_KEY='mudmaster_notifications_seen_v2';
+  function getSeenMap(){ try{return JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY)||'{}')}catch(e){return{}} }
+  function setSeen(id){ const m=getSeenMap(); m[id]=Date.now(); localStorage.setItem(NOTIF_SEEN_KEY,JSON.stringify(m)); }
+  function parseNotificationTs(n){
+    const t=Date.parse(n.createdAt||n.ts||'');
+    return Number.isFinite(t)?t:0;
+  }
+  function scopedNotifications(){
+    return Object.entries(notificationsCache||{}).map(([id,n])=>({id,...n}))
+      .filter(n=>!n.operation||n.operation==='ALL'||n.operation===currentOperation)
+      .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  }
+  window.markNotificationRead=async function(id){
+    setSeen(id);
+    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/readBy/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({at:isoLocal(new Date())}); }catch(e){}
+    renderNotifications();
+  };
+  window.reactNotificationThumb=async function(id){
+    setSeen(id);
+    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/reactions/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({reaction:'thumbs_up',at:isoLocal(new Date())}); }catch(e){}
+    renderNotifications();
+  };
+  renderNotifications=function(){
+    const list=document.getElementById('notificationList'), cnt=document.getElementById('notificationCount');
+    const rows=scopedNotifications();
+    const seen=getSeenMap();
+    const unread=rows.filter(n=>!seen[n.id]);
+    if(list) list.innerHTML=rows.map(n=>{
+      const read=!!seen[n.id];
+      const ageMin=Math.max(0,Math.round((Date.now()-parseNotificationTs(n))/60000));
+      return `<div class="notice-item ${read?'notice-read':''}"><b>${n.operation||'ALL'}</b> · ${n.createdAt||''} · hace ${ageMin} min<br>${String(n.text||'').replace(/</g,'&lt;')}<br><span class="small">${n.author||''}</span><div class="notice-actions"><button onclick="markNotificationRead('${n.id}')">Leído</button><button onclick="reactNotificationThumb('${n.id}')">👍</button></div></div>`;
+    }).join('')||'Sin mensajes.';
+    if(cnt){ cnt.style.display=unread.length?'inline-block':'none'; cnt.textContent=unread.length>9?'9+':unread.length; }
+  };
+  const notifBtn=document.getElementById('notificationBtn');
+  if(notifBtn){ notifBtn.onclick=()=>{ document.getElementById('notificationsModal').classList.add('open'); scopedNotifications().forEach(n=>setSeen(n.id)); renderNotifications(); }; }
+  // Mostrar banner solo si el mensaje fue enviado hace menos del tiempo configurado, no cada vez que entra a la app.
+  let _lastBannerId=null;
+  const oldSubscribe=subscribeNotifications;
+  subscribeNotifications=function(){
+    if(!fb.db) return;
+    fb.db.ref('notifications').limitToLast(30).on('value',snap=>{
+      notificationsCache=snap.val()||{};
+      renderNotifications();
+      const rows=scopedNotifications(); const latest=rows[0];
+      if(!latest) return;
+      const duration=(internalSettings.bannerSec||120)*1000;
+      const age=Date.now()-parseNotificationTs(latest);
+      if(latest.id!==_lastBannerId && age>=0 && age<=duration){ _lastBannerId=latest.id; showTopBanner('📢 '+(latest.text||''), internalSettings.bannerSec||120); }
+    });
+  };
+  const rot=document.getElementById('zoneRotation'), slider=document.getElementById('zoneRotationSlider');
+  if(slider){ slider.max='360'; slider.setAttribute('max','360'); }
+  if(rot){ rot.addEventListener('change',()=>{ let v=Number(rot.value)||0; v=((v%360)+360)%360; rot.value=v; if(slider) slider.value=v; if(typeof updateZonePreview==='function') updateZonePreview(); }); }
+})();
+
+
+/* PATCH seguro 2026-07-06 - topografía: fechas por nombre, gráfica ampliable e histórico Firebase */
+(function(){
+  function extractDateFromFilename(name){
+    const s=String(name||'');
+    let m=s.match(/(20\d{2})[-_\.]?(0[1-9]|1[0-2])[-_\.]?([0-2]\d|3[01])/);
+    if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m=s.match(/([0-2]\d|3[01])[-_\.](0[1-9]|1[0-2])[-_\.](20\d{2})/);
+    if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m=s.match(/(20\d{2})(0[1-9]|1[0-2])([0-2]\d|3[01])/);
+    if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+    return '';
+  }
+  function wireTopoDateAutofill(){
+    const oldFile=document.getElementById('topoOldFile'), newFile=document.getElementById('topoNewFile');
+    const oldDate=document.getElementById('topoOldDate'), newDate=document.getElementById('topoNewDate');
+    if(oldFile && !oldFile.dataset.datePatch){
+      oldFile.dataset.datePatch='1';
+      oldFile.addEventListener('change',()=>{ const d=extractDateFromFilename(oldFile.files?.[0]?.name||''); if(d && oldDate && !oldDate.value) oldDate.value=d; });
+    }
+    if(newFile && !newFile.dataset.datePatch){
+      newFile.dataset.datePatch='1';
+      newFile.addEventListener('change',()=>{ const d=extractDateFromFilename(newFile.files?.[0]?.name||''); if(d && newDate && !newDate.value) newDate.value=d; });
+    }
+  }
+  function installChartExpand(){
+    if(document.getElementById('btnCloseChartExpand')) document.getElementById('btnCloseChartExpand').onclick=()=>document.getElementById('chartExpandModal')?.classList.remove('open');
+    document.addEventListener('click',e=>{
+      const chart=e.target.closest && e.target.closest('#topoChart,#svtChart');
+      if(!chart || !chart.innerHTML.trim()) return;
+      const modal=document.getElementById('chartExpandModal'), content=document.getElementById('chartExpandContent'), title=document.getElementById('chartExpandTitle');
+      if(!modal||!content) return;
+      title.textContent=chart.id==='topoChart'?'Gráfica ampliada · Topografía':'Gráfica ampliada · SVT';
+      content.innerHTML=chart.innerHTML;
+      modal.classList.add('open');
+    });
+  }
+  async function persistTopoComparison(){
+    try{
+      if(!window.topoCompareRows || !topoCompareRows.length || !fb || !fb.db) return;
+      const op=(document.getElementById('topoOperationFilter')?.value||topoCompareRows[0]?.operacion||currentOperation||'General').trim()||'General';
+      const opCode=(OPERATION_PROFILES[op]?.code)||makeOperationCode(op)||topoCompareRows[0]?.operation_code||'GEN';
+      const from=document.getElementById('topoOldDate')?.value||topoCompareRows[0]?.fecha_anterior||'';
+      const to=document.getElementById('topoNewDate')?.value||topoCompareRows[0]?.fecha_actual||'';
+      const key=safeKey(`${from}_${to}_${Date.now()}`);
+      const payload={operation:op,operationCode:opCode,fecha_anterior:from,fecha_actual:to,createdAt:new Date().toISOString(),grid_m:Number(document.getElementById('topoGridM')?.value)||2,rows:topoCompareRows};
+      await fb.db.ref(`operations/${opCode}/topographyComparisons/${key}`).set(payload);
+      await fb.db.ref(`topographyComparisons/${opCode}/${key}`).set(payload);
+      const el=document.getElementById('topoCompareResult');
+      if(el && !el.querySelector('.topo-history-note')) el.insertAdjacentHTML('afterbegin','<div class="topo-history-note">Comparación guardada en Firebase como histórico de topografía de la operación.</div>');
+    }catch(e){ console.warn('No se pudo guardar comparación topográfica en Firebase',e); }
+  }
+  function wrapRunTopoCompare(){
+    if(window.runTopoCompare && !window.runTopoCompare._historyPatch){
+      const original=window.runTopoCompare;
+      window.runTopoCompare=async function(){ await original.apply(this,arguments); await persistTopoComparison(); };
+      window.runTopoCompare._historyPatch=true;
+      const b=document.getElementById('btnRunTopoCompare'); if(b) b.onclick=window.runTopoCompare;
+    }
+  }
+  setTimeout(()=>{ wireTopoDateAutofill(); installChartExpand(); wrapRunTopoCompare(); },1000);
+  document.addEventListener('change',e=>{ if(e.target && (e.target.id==='topoOldFile'||e.target.id==='topoNewFile')) wireTopoDateAutofill(); });
+})();
+
+</script>
+
+
+<script>
+// =========================================================
+// PATCH 2026-07-06: Topografía 4326 con cut/fill/pendiente + SVT dashboard/import/manual
+(function(){
+  const css = document.createElement('style');
+  css.textContent = `
+    .mini-chart{width:100%;height:190px;border:1px solid var(--border);border-radius:8px;background:#081009;margin-top:8px;padding:6px;overflow:hidden;}
+    .topo-note-strong{background:#0b160d;border:1px solid var(--brand);border-radius:8px;padding:8px;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.35;}
+    .inline-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .sv-manual-box{border:1px dashed var(--brand);border-radius:8px;padding:8px;margin-top:8px;background:#0f1a12;}
+    .table-scroll{max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:8px;}
+  `;
+  document.head.appendChild(css);
+
+  function htmlEscape(s){ return String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function dateRangeKeys(from,to){
+    const out=[]; if(!from||!to) return out;
+    const a=new Date(from+'T00:00:00'), b=new Date(to+'T00:00:00');
+    if(!isFinite(a)||!isFinite(b)) return out;
+    for(let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) out.push(d.toISOString().slice(0,10));
+    return out;
+  }
+  function avg(nums){ nums=nums.filter(Number.isFinite); return nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null; }
+  function getSvMaxFromRecord(r){
+    const nums=[];
+    Object.values(r.readings||{}).forEach(row=>Object.values(row||{}).forEach(v=>{ const n=Number(v); if(Number.isFinite(n)) nums.push(n); }));
+    ['max_kpa','kpa','max','value'].forEach(k=>{ const n=Number(r[k]); if(Number.isFinite(n)) nums.push(n); });
+    return nums.length?Math.max(...nums):null;
+  }
+  function inferTopoEpsg(gr){
+    const prj=String(gr.projection||gr.crs||gr.projectionString||'');
+    const m=prj.match(/EPSG[:\/]*([0-9]+)/i);
+    if(m) return 'EPSG:'+m[1];
+    // georaster sometimes uses numeric 4326 in projection
+    if(String(gr.projection||'')==='4326') return 'EPSG:4326';
+    return 'desconocido';
+  }
+  function looks4326(gr){
+    const epsg=inferTopoEpsg(gr);
+    if(epsg==='EPSG:4326') return true;
+    // fallback: extents look like lon/lat
+    return Math.abs(Number(gr.xmin))<=180 && Math.abs(Number(gr.xmax))<=180 && Math.abs(Number(gr.ymin))<=90 && Math.abs(Number(gr.ymax))<=90;
+  }
+
+  function addTopoUi(){
+    const sec=document.querySelector('[data-admin-section="topografia"]'); if(!sec || sec.dataset.patchTopo2) return; sec.dataset.patchTopo2='1';
+    const note=sec.querySelector('.small');
+    if(note) note.innerHTML='Carga temporal de dos GeoTIFF <b>solo EPSG:4326 / WGS84</b>. El análisis se calcula por área operacional de la operación seleccionada. Los rasters no se guardan en nube.';
+    const grid=sec.querySelector('.dashboard-filter');
+    if(grid && !document.getElementById('topoDatumCota')){
+      grid.insertAdjacentHTML('beforeend', `
+        <div><label>Cota referencia (opcional)</label><input id="topoDatumCota" type="number" step="0.01" placeholder="Ej: 3800.00"></div>
+        <div><label>Unidad vertical</label><select id="topoZUnit"><option value="m">m</option><option value="cm">cm</option></select></div>
+      `);
+    }
+    const result=document.getElementById('topoCompareResult');
+    if(result && !document.getElementById('topoChart')){
+      result.insertAdjacentHTML('beforebegin', `<div class="topo-note-strong"><b>Especificación:</b> usar solamente <b>WGS84 / EPSG:4326</b>. <b>Muestras</b> = cantidad de puntos de grilla usados dentro del polígono y con dato válido en ambas superficies. <b>Fill</b> = Actual &gt; Anterior. <b>Cut</b> = Actual &lt; Anterior. Volúmenes aproximados = diferencia de cota × área de celda.</div><div id="topoChart" class="mini-chart">Gráfica topográfica pendiente.</div>`);
+    }
+  }
+
+  async function collectEventsAndSvForTopo(from,to,opFilter,zoneKey){
+    const days=dateRangeKeys(from,to); const evs=[]; const svs=[];
+    if(!fb || !fb.db) return {evs,svs};
+    for(const day of days){
+      try{
+        const ev=(await fb.db.ref('passEvents/'+day).once('value')).val()||{};
+        Object.values(ev).forEach(e=>{
+          const opMatch=!opFilter || String(e.operationName||e.operationCode||'').toLowerCase().includes(opFilter) || String(e.operationCode||'').toLowerCase().includes(opFilter);
+          const zoneMatch=!zoneKey || e.zoneKey===zoneKey || String(e.zoneName||'')===String(operationLayouts?.[zoneKey]?.name||'');
+          if(opMatch && zoneMatch) evs.push({...e,dateKey:day});
+        });
+      }catch(e){}
+      try{
+        const sv=(await fb.db.ref('shearVaneTests/'+day).once('value')).val()||{};
+        Object.values(sv).forEach(r=>{
+          const opMatch=!opFilter || String(r.operation||r.operacion||r.site||'').toLowerCase().includes(opFilter);
+          if(opMatch) svs.push({...r,dateKey:day,svMax:getSvMaxFromRecord(r)});
+        });
+      }catch(e){}
+    }
+    return {evs,svs};
+  }
+
+  function renderTopoChart(rows){
+    const el=document.getElementById('topoChart'); if(!el) return;
+    if(!rows.length){ el.textContent='Sin datos para graficar.'; return; }
+    const w=620,h=170,pad=24; const maxV=Math.max(1,...rows.flatMap(r=>[Math.abs(r.fill_m3||0),Math.abs(r.cut_m3||0)]));
+    const bw=Math.max(10,(w-pad*2)/Math.max(1,rows.length)/2.4);
+    const zero=h-30;
+    let svg=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%"><line x1="${pad}" y1="${zero}" x2="${w-pad}" y2="${zero}" stroke="#234a26"/>`;
+    rows.forEach((r,i)=>{
+      const x=pad+i*((w-pad*2)/rows.length)+4;
+      const fillH=(Math.abs(r.fill_m3||0)/maxV)*(h-55); const cutH=(Math.abs(r.cut_m3||0)/maxV)*(h-55);
+      svg+=`<rect x="${x}" y="${zero-fillH}" width="${bw}" height="${fillH}" fill="#2ecc71"><title>${htmlEscape(r.zona)} Fill ${Math.round(r.fill_m3||0)} m³</title></rect>`;
+      svg+=`<rect x="${x+bw+2}" y="${zero-cutH}" width="${bw}" height="${cutH}" fill="#e74c3c"><title>${htmlEscape(r.zona)} Cut ${Math.round(r.cut_m3||0)} m³</title></rect>`;
+      svg+=`<text x="${x}" y="${h-6}" fill="#8fae86" font-size="9" transform="rotate(-25 ${x},${h-6})">${htmlEscape(String(r.zona||'').slice(0,10))}</text>`;
+    });
+    svg+=`<text x="${pad}" y="12" fill="#8fae86" font-size="11">Verde=Fill · Rojo=Cut · ordenado por volumen absoluto</text></svg>`;
+    el.innerHTML=svg;
+  }
+
+  window.runTopoCompare = async function(){
+    const oldF=document.getElementById('topoOldFile')?.files?.[0], newF=document.getElementById('topoNewFile')?.files?.[0];
+    if(!oldF||!newF){ alert('Seleccione topografía anterior y actual.'); return; }
+    const el=document.getElementById('topoCompareResult'); if(el) el.textContent='Procesando rasters EPSG:4326 temporalmente...';
+    try{
+      const [oldR,newR]=await Promise.all([readRasterFile(oldF),readRasterFile(newF)]);
+      if(!looks4326(oldR)||!looks4326(newR)){
+        if(el) el.innerHTML=`<b>Error CRS:</b> ambos GeoTIFF deben estar en EPSG:4326 / WGS84. Detectado: anterior ${inferTopoEpsg(oldR)}, actual ${inferTopoEpsg(newR)}. Reexportar en QGIS a EPSG:4326.`;
+        return;
+      }
+      const gridM=Math.max(2,Number(document.getElementById('topoGridM')?.value)||2);
+      const cotaRef=Number(document.getElementById('topoDatumCota')?.value);
+      const hasCota=Number.isFinite(cotaRef);
+      const zUnit=document.getElementById('topoZUnit')?.value||'m'; const zFactor=zUnit==='cm'?0.01:1;
+      const from=document.getElementById('topoOldDate')?.value||'', to=document.getElementById('topoNewDate')?.value||'';
+      const opText=(document.getElementById('topoOperationFilter')?.value||'').trim(); const opFilter=opText.toLowerCase();
+      topoCompareRows=[];
+      const layouts=Object.entries(scopedLayouts(operationLayouts)||{});
+      for(const [zoneKey,z] of layouts){
+        if(opFilter && !(String(z.operation_name||'').toLowerCase().includes(opFilter)||String(z.operation_code||'').toLowerCase().includes(opFilter))) continue;
+        if(!z.polygon||z.polygon.length<3) continue;
+        const bb=bboxOfPolygon(z.polygon), midLat=(bb.minLat+bb.maxLat)/2, st=approxStepDegMeters(gridM,midLat);
+        const xy=makeProjector(z.polygon); const polyXY=z.polygon.map(c=>xy.toXY(c));
+        let n=0,sum=0,min=Infinity,max=-Infinity,fill=0,cut=0,above=0,below=0,slopeVals=[];
+        const cellArea=gridM*gridM;
+        for(let lat=bb.minLat; lat<=bb.maxLat; lat+=st.dLat){
+          for(let lon=bb.minLon; lon<=bb.maxLon; lon+=st.dLon){
+            if(!pointInPolyXY(xy.toXY([lat,lon]), polyXY)) continue;
+            const a0=georasterValueAt(oldR,lat,lon), b0=georasterValueAt(newR,lat,lon); if(a0===null||b0===null) continue;
+            const a=a0*zFactor, b=b0*zFactor, d=b-a;
+            n++; sum+=d; min=Math.min(min,d); max=Math.max(max,d);
+            if(d>0) fill+=d*cellArea; else cut+=Math.abs(d)*cellArea;
+            if(hasCota){ if(b>=cotaRef) above++; else below++; }
+            const be=georasterValueAt(newR,lat,lon+st.dLon), bn=georasterValueAt(newR,lat+st.dLat,lon);
+            if(be!==null && bn!==null){ const sx=((be*zFactor)-b)/gridM, sy=((bn*zFactor)-b)/gridM; slopeVals.push(Math.sqrt(sx*sx+sy*sy)*100); }
+            if(n>30000) break;
+          }
+          if(n>30000) break;
+        }
+        const areaHa=polygonAreaM2(z.polygon)/10000;
+        const {evs,svs}=await collectEventsAndSvForTopo(from,to,opFilter,zoneKey);
+        const lines=new Set(evs.map(e=>e.lineName||e.lineKey).filter(Boolean));
+        const svMaxVals=svs.map(s=>s.svMax).filter(Number.isFinite);
+        topoCompareRows.push({
+          fecha_anterior:from,fecha_actual:to,operacion:z.operation_name||'',operation_code:z.operation_code||'',zona:layoutDisplayName(z,zoneKey),area_ha:areaHa,muestras:n,
+          diff_media_m:n?sum/n:null,diff_min_m:n?min:null,diff_max_m:n?max:null,fill_m3:fill,cut_m3:cut,net_m3:fill-cut,vol_abs_m3:fill+cut,
+          cota_ref_m:hasCota?cotaRef:'',area_sobre_cota_ha:hasCota?(above*cellArea/10000):'',area_bajo_cota_ha:hasCota?(below*cellArea/10000):'',pendiente_prom_pct:avg(slopeVals),
+          cruces_periodo:evs.length,lineas_periodo:lines.size,svt_muestras:svs.length,svt_prom_kpa:avg(svMaxVals),svt_max_kpa:svMaxVals.length?Math.max(...svMaxVals):null
+        });
+      }
+      topoCompareRows.sort((a,b)=>(b.vol_abs_m3||0)-(a.vol_abs_m3||0));
+      if(el) el.innerHTML=topoCompareRows.length?`<div class="table-scroll"><table class="pass-table"><thead><tr><th>Zona</th><th>Área ha</th><th>Muestras</th><th>Fill m³</th><th>Cut m³</th><th>Net m³</th><th>Δ medio m</th><th>Pend. %</th><th>Cruces</th><th>Líneas</th><th>SVT máx</th></tr></thead><tbody>${topoCompareRows.map(r=>`<tr><td>${htmlEscape(r.zona)}</td><td>${r.area_ha.toFixed(2)}</td><td>${r.muestras}</td><td>${Math.round(r.fill_m3).toLocaleString()}</td><td>${Math.round(r.cut_m3).toLocaleString()}</td><td>${Math.round(r.net_m3).toLocaleString()}</td><td>${r.diff_media_m===null?'N/D':r.diff_media_m.toFixed(2)}</td><td>${r.pendiente_prom_pct===null?'N/D':r.pendiente_prom_pct.toFixed(1)}</td><td>${r.cruces_periodo}</td><td>${r.lineas_periodo}</td><td>${r.svt_max_kpa===null?'N/D':r.svt_max_kpa.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`:'Sin resultados. Revise operación, fecha y que los rasters EPSG:4326 cubran las áreas.';
+      renderTopoChart(topoCompareRows);
+    }catch(e){ if(el) el.textContent='Error comparación topográfica: '+e.message; }
+  };
+  window.exportTopoCsv = function(){
+    if(!topoCompareRows.length){ alert('Primero ejecute la comparación.'); return; }
+    const head=['fecha_anterior','fecha_actual','operacion','operation_code','zona','area_ha','muestras','diff_media_m','diff_min_m','diff_max_m','fill_m3','cut_m3','net_m3','vol_abs_m3','cota_ref_m','area_sobre_cota_ha','area_bajo_cota_ha','pendiente_prom_pct','cruces_periodo','lineas_periodo','svt_muestras','svt_prom_kpa','svt_max_kpa'];
+    const rows=[head,...topoCompareRows.map(r=>head.map(k=>r[k]??''))];
+    downloadFile('comparacion_topografica_cut_fill_svt_operacion.csv', rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n'), 'text/csv');
+  };
+
+  function addSvtUi(){
+    const sec=document.querySelector('[data-admin-section="shear"]'); if(!sec || sec.dataset.patchSvt2) return; sec.dataset.patchSvt2='1';
+    const op=document.getElementById('svAdminOperation');
+    if(op && op.tagName==='INPUT'){
+      const sel=document.createElement('select'); sel.id='svAdminOperationSelect'; sel.innerHTML='<option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option><option value="ALL">Todas</option>'; sel.value=op.value||'Cerro Corona'; op.replaceWith(sel);
+    }
+    const exportBtn=document.getElementById('btnAdminExportShearCsv');
+    if(exportBtn && !document.getElementById('btnSvtDashboard')){
+      exportBtn.insertAdjacentHTML('beforebegin', `
+        <button id="btnSvtDashboard" class="btn-outline" style="width:100%;margin-top:8px;">Actualizar dashboard SVT</button>
+        <div id="svtChart" class="mini-chart">Gráfica SVT pendiente.</div>
+        <div id="svtSummaryTable" class="small">Sin consulta SVT.</div>
+        <div class="sv-manual-box"><b>Ingreso manual / CSV SVT</b>
+          <div class="dashboard-filter">
+            <div><label>Fecha</label><input id="svManualDate" type="date"></div>
+            <div><label>Operación</label><select id="svManualOperation"><option>Cerro Corona</option><option>Peñasquito</option></select></div>
+            <div><label>Punto</label><input id="svManualPoint" placeholder="Ej: AN-01"></div>
+            <div><label>MMn°</label><input id="svManualMachine" placeholder="Ej: MM27"></div>
+            <div><label>Lat</label><input id="svManualLat" type="number" step="0.0000001"></div>
+            <div><label>Lon</label><input id="svManualLon" type="number" step="0.0000001"></div>
+            <div><label>15 cm kPa</label><input id="svManual15" type="number" step="0.1"></div>
+            <div><label>30 cm kPa</label><input id="svManual30" type="number" step="0.1"></div>
+            <div><label>50 cm kPa</label><input id="svManual50" type="number" step="0.1"></div>
+            <div><label>100 cm kPa</label><input id="svManual100" type="number" step="0.1"></div>
+          </div>
+          <label>Comentario</label><textarea id="svManualComment" rows="2"></textarea>
+          <button id="btnSaveManualSvt" style="background:var(--brand);color:#0f1a12;border:none;margin-top:8px;">Guardar SVT manual</button>
+          <label>Cargar CSV SVT</label><input id="svCsvFile" type="file" accept=".csv">
+          <button id="btnImportSvtCsv" class="btn-outline" style="width:100%;margin-top:6px;">Importar CSV SVT</button>
+          <div class="small">CSV sugerido: date,operation,point,machine,lat,lon,kpa15,kpa30,kpa50,kpa100,comment.</div>
+        </div>`);
+    }
+    const d=document.getElementById('svManualDate'); if(d && !d.value) d.value=todayKey();
+  }
+  function getSvtAdminOperation(){ return document.getElementById('svAdminOperationSelect')?.value || document.getElementById('svAdminOperation')?.value || currentOperation || 'Cerro Corona'; }
+  async function loadSvtForOperation(){
+    const date=document.getElementById('svAdminDate')?.value||todayKey(); const op=getSvtAdminOperation();
+    if(!fb.db){ alert('Firebase no activo.'); return []; }
+    const snap=await fb.db.ref('shearVaneTests/'+date).once('value');
+    return Object.values(snap.val()||{}).filter(r=>op==='ALL' || String(r.operation||r.operacion||r.site||'').toLowerCase().includes(op.toLowerCase())).map(r=>({...r,svMax:getSvMaxFromRecord(r)}));
+  }
+  function renderSvtChart(rows){
+    const el=document.getElementById('svtChart'); if(!el) return;
+    if(!rows.length){ el.textContent='Sin registros SVT para graficar.'; return; }
+    const w=620,h=170,pad=24; const maxV=Math.max(40,...rows.map(r=>r.svMax||0)); const bw=Math.max(8,(w-pad*2)/rows.length*0.65);
+    let svg=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%"><line x1="${pad}" y1="${h-30}" x2="${w-pad}" y2="${h-30}" stroke="#234a26"/><line x1="${pad}" y1="${h-30-(40/maxV)*(h-55)}" x2="${w-pad}" y2="${h-30-(40/maxV)*(h-55)}" stroke="#e74c3c" stroke-dasharray="4,4"/><text x="${pad+4}" y="${h-34-(40/maxV)*(h-55)}" fill="#e74c3c" font-size="10">40 kPa</text>`;
+    rows.forEach((r,i)=>{ const x=pad+i*((w-pad*2)/rows.length)+4; const val=r.svMax||0, bh=(val/maxV)*(h-55); svg+=`<rect x="${x}" y="${h-30-bh}" width="${bw}" height="${bh}" fill="${val>=40?'#e74c3c':'#7DCD00'}"><title>${htmlEscape(r.point||i+1)} ${val} kPa</title></rect><text x="${x}" y="${h-6}" fill="#8fae86" font-size="9" transform="rotate(-25 ${x},${h-6})">${htmlEscape(String(r.point||i+1).slice(0,8))}</text>`; });
+    svg+='</svg>'; el.innerHTML=svg;
+  }
+  async function updateSvtDashboard(){
+    const rows=await loadSvtForOperation(); const el=document.getElementById('svtSummaryTable'); const vals=rows.map(r=>r.svMax).filter(Number.isFinite);
+    if(el) el.innerHTML=rows.length?`<div><b>Registros:</b> ${rows.length} · <b>Prom:</b> ${avg(vals)?.toFixed(1)||'N/D'} kPa · <b>Máx:</b> ${vals.length?Math.max(...vals).toFixed(1):'N/D'} kPa · <b>Alertas ≥40:</b> ${vals.filter(v=>v>=40).length}</div><div class="table-scroll"><table class="pass-table"><thead><tr><th>Punto</th><th>Operación</th><th>MM</th><th>Máx kPa</th><th>Comentario</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${htmlEscape(r.point||'')}</td><td>${htmlEscape(r.operation||'')}</td><td>${htmlEscape(r.machine||r.maquina||'')}</td><td>${r.svMax??''}</td><td>${htmlEscape(r.comment||'')}</td></tr>`).join('')}</tbody></table></div>`:'Sin registros SVT para esa operación/fecha.';
+    renderSvtChart(rows);
+  }
+  async function saveManualSvt(){
+    if(!fb.db){ alert('Firebase no activo.'); return; }
+    const date=document.getElementById('svManualDate')?.value||todayKey();
+    const rec={operation:document.getElementById('svManualOperation')?.value||'Cerro Corona',point:document.getElementById('svManualPoint')?.value||'',machine:document.getElementById('svManualMachine')?.value||'',lat:Number(document.getElementById('svManualLat')?.value)||null,lon:Number(document.getElementById('svManualLon')?.value)||null,comment:document.getElementById('svManualComment')?.value||'',createdAt:new Date().toISOString(),manual:true,readings:{center:{'15cm':Number(document.getElementById('svManual15')?.value)||null,'30cm':Number(document.getElementById('svManual30')?.value)||null,'50cm':Number(document.getElementById('svManual50')?.value)||null,'100cm':Number(document.getElementById('svManual100')?.value)||null}}};
+    await fb.db.ref('shearVaneTests/'+date).push(rec); alert('SVT manual guardado.'); updateSvtDashboard();
+  }
+  function parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; } else if(ch===','&&!q){ out.push(cur); cur=''; } else cur+=ch; } out.push(cur); return out; }
+  async function importSvtCsv(){
+    if(!fb.db){ alert('Firebase no activo.'); return; }
+    const f=document.getElementById('svCsvFile')?.files?.[0]; if(!f){ alert('Seleccione CSV.'); return; }
+    const lines=(await f.text()).split(/\r?\n/).filter(Boolean); if(lines.length<2) return;
+    const head=parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase()); let n=0;
+    for(const line of lines.slice(1)){
+      const vals=parseCsvLine(line); const obj={}; head.forEach((h,i)=>obj[h]=vals[i]);
+      const date=obj.date||obj.fecha||todayKey(); const rec={operation:obj.operation||obj.operacion||'Cerro Corona',point:obj.point||obj.punto||'',machine:obj.machine||obj.mm||'',lat:Number(obj.lat)||null,lon:Number(obj.lon)||null,comment:obj.comment||obj.comentario||'',createdAt:new Date().toISOString(),manual_csv:true,readings:{center:{'15cm':Number(obj.kpa15||obj['15cm'])||null,'30cm':Number(obj.kpa30||obj['30cm'])||null,'50cm':Number(obj.kpa50||obj['50cm'])||null,'100cm':Number(obj.kpa100||obj['100cm'])||null}}};
+      await fb.db.ref('shearVaneTests/'+date).push(rec); n++;
+    }
+    alert(`${n} registros SVT importados.`); updateSvtDashboard();
+  }
+
+  setTimeout(()=>{
+    addTopoUi(); addSvtUi();
+    const a=document.getElementById('btnRunTopoCompare'); if(a)a.onclick=window.runTopoCompare;
+    const b=document.getElementById('btnExportTopoCsv'); if(b)b.onclick=window.exportTopoCsv;
+    const c=document.getElementById('btnSvtDashboard'); if(c)c.onclick=updateSvtDashboard;
+    const d=document.getElementById('btnSaveManualSvt'); if(d)d.onclick=saveManualSvt;
+    const e=document.getElementById('btnImportSvtCsv'); if(e)e.onclick=importSvtCsv;
+  },800);
 })();
 </script>
+
+<div id="chartExpandModal"><div id="chartExpandCard"><div id="chartExpandHeader"><span id="chartExpandTitle">Gráfica ampliada</span><button id="btnCloseChartExpand" class="btn-outline" style="width:auto;margin:0;">Cerrar</button></div><div id="chartExpandContent"></div></div></div>
+
 </body>
 </html>
-
