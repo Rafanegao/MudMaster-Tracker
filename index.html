@@ -77,7 +77,7 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 .admin-module-tabs button.active{background:#7DCD00;color:#0f1a12;box-shadow:0 0 0 2px rgba(125,205,0,.35) inset;}
 .admin-module-tabs button.settings-tab{background:#2f4150;color:#d6f4ff;border:1px solid #5f8fa5;}
 .admin-module-tabs button.settings-tab.active{background:#5f8fa5;color:#071217;}
-.brand-logo{height:20px;max-width:145px;object-fit:contain;vertical-align:middle;margin-right:8px;}
+.brand-logo{height:18px;max-width:115px;object-fit:contain;vertical-align:middle;margin-right:6px;background:rgba(255,255,255,.92);border-radius:4px;padding:2px 4px;box-shadow:0 0 0 1px rgba(255,255,255,.18);}
 .machine-watermark{position:absolute;right:12px;top:62px;z-index:450;background:rgba(10,20,12,.72);border:1px solid var(--border);border-radius:10px;padding:5px;pointer-events:none;}
 .machine-watermark img{width:180px;max-width:22vw;display:block;opacity:.88;}
 .folder.collapsed>.folder-body{display:none;}
@@ -93,6 +93,11 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 .notice-item b{color:var(--brand);}
 .viewer-mode-note{background:#e67e2233;border:1px solid #e67e22;border-radius:8px;color:#ffd6a3;padding:7px;margin-top:8px;font-size:11px;}
 .operation-line-strip{pointer-events:none;}
+.notice-actions{display:flex;gap:6px;align-items:center;margin-top:6px;}
+.notice-actions button{width:auto;margin:0;padding:3px 8px;font-size:11px;background:transparent;border:1px solid var(--brand);color:var(--brand);}
+.notice-read{opacity:.65;}
+.sv-point-label{display:flex;align-items:center;justify-content:center;border-radius:50%;font-weight:900;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.55);}
+
 
 #topAlertBanner{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:1200;min-width:320px;max-width:70vw;background:rgba(230,126,34,.96);color:#111;border:2px solid #ffd08a;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:800;box-shadow:0 4px 18px rgba(0,0,0,.45);display:none;text-align:center;}
 #topAlertBanner.show{display:block;}
@@ -314,7 +319,7 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
           <div><label>Espaciamiento líneas (m)</label><input id="zoneSpacing" type="number" step="0.05" value="6.25"></div>
           <div><label>Rotación layout (°)</label><input id="zoneRotation" type="number" step="1" value="0"></div>
         </div>
-        <input id="zoneRotationSlider" type="range" min="0" max="179" step="1" value="0">
+        <input id="zoneRotationSlider" type="range" min="0" max="360" step="1" value="0">
         <div class="login-row">
           <div><label>Tolerancia GPS (m)</label><input id="zoneTolerance" type="number" step="0.5" value="4"></div>
           <div><label>Bloqueo misma línea (s)</label><input id="zoneCooldown" type="number" step="1" value="25"></div>
@@ -451,6 +456,10 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
         <div class="settings-row"><span>Alerta fuera de zona</span><select id="alertOutZone"><option value="true">Activa</option><option value="false">Inactiva</option></select></div>
         <div class="settings-row"><span>Alerta SV alta (kPa)</span><input id="alertSvKpa" type="number" step="1" value="40"></div>
         <div class="settings-row"><span>Mostrar mensaje en pantalla (s)</span><input id="alertBannerSec" type="number" step="10" value="120"></div>
+        <div class="settings-row"><span>Tamaño marcador SV planificado</span><input id="svMarkerSize" type="number" step="1" value="18"></div>
+        <div class="settings-row"><span>Tamaño número SV</span><input id="svLabelSize" type="number" step="1" value="10"></div>
+        <div class="settings-row"><span>Color marcador SV</span><input id="svMarkerColor" type="color" value="#7DCD00"></div>
+        <div class="settings-row"><span>Color texto SV</span><input id="svTextColor" type="color" value="#0f1a12"></div>
         <button id="btnSaveInternalSettings" style="background:var(--brand);color:#0f1a12;border:none;margin-top:8px;">Guardar configuraciones</button>
         <div id="internalSettingsMsg" class="small"></div>
         <div class="small" style="margin-top:8px;">Capas definitivas: si una capa se marca como crítica, no se elimina desde la app; solo se puede ocultar/mostrar.</div>
@@ -1658,16 +1667,32 @@ const oldCloseAdminRight=closeAdminRight;
 closeAdminRight=function(){ oldCloseAdminRight(); if(!(fb.admin||fb.supervisor)) document.getElementById('adminModuleTabs')?.classList.remove('visible'); };
 
 // Clima básico usando ubicación del navegador + Open-Meteo.
+function weatherIcon(code){
+  code=Number(code);
+  if([0].includes(code)) return '☀️';
+  if([1,2,3].includes(code)) return '⛅';
+  if([45,48].includes(code)) return '🌫️';
+  if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
+  if([71,73,75,77,85,86].includes(code)) return '❄️';
+  if([95,96,99].includes(code)) return '⛈️';
+  return '🌦️';
+}
+function compactLocationLabel(lat,lon){
+  const op=currentOperation && currentOperation!=='Otra' ? currentOperation.replace('Cerro Corona','CC').replace('Peñasquito','PQ') : '';
+  return op ? `📍 ${op}` : `📍 ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
+}
+// Clima básico usando ubicación del navegador + Open-Meteo.
 async function updateWeatherPill(){
   const pill=document.getElementById('weatherPill'); if(!pill||!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(async pos=>{
     try{
       const lat=pos.coords.latitude, lon=pos.coords.longitude;
-      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,precipitation,wind_speed_10m&timezone=auto`);
+      const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m,precipitation,wind_speed_10m,weather_code&timezone=auto`);
       const j=await r.json(); const c=j.current||{};
-      pill.textContent=`${Math.round(c.temperature_2m)}°C · ${Number(c.precipitation||0).toFixed(1)}mm · ${Math.round(c.wind_speed_10m||0)}km/h`;
-    }catch(e){ pill.textContent='Clima no disponible'; }
-  },()=>{pill.textContent='Clima --';},{enableHighAccuracy:false,maximumAge:600000,timeout:8000});
+      pill.textContent=`${compactLocationLabel(lat,lon)} · ${weatherIcon(c.weather_code)} ${Math.round(c.temperature_2m)}°C · ${Number(c.precipitation||0).toFixed(1)}mm · ${Math.round(c.wind_speed_10m||0)}km/h`;
+      pill.title=`Ubicación GPS: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    }catch(e){ pill.textContent='📍 -- · Clima no disponible'; }
+  },()=>{pill.textContent='📍 -- · Clima --';},{enableHighAccuracy:false,maximumAge:600000,timeout:8000});
 }
 setTimeout(updateWeatherPill,1200); setInterval(updateWeatherPill,15*60*1000);
 
@@ -1955,7 +1980,17 @@ async function importSvPoints(){
 function renderSvPlannedPoints(payload){
   if(svPointLayer){ try{map.removeLayer(svPointLayer)}catch(e){} svPointLayer=null; }
   if(!payload || !payload.points || !svPointsVisible) return;
-  svPointLayer=L.layerGroup(); Object.values(payload.points).forEach(p=>{ if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon))) return; L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<span class="sv-point-label">${p.number||p.name}</span>`,iconSize:[24,24],iconAnchor:[12,12]})}).bindTooltip(`${p.name||p.number}`,{sticky:true}).addTo(svPointLayer); }); svPointLayer.addTo(map);
+  const size=Math.max(8, Number(internalSettings.svMarkerSize)||18);
+  const fs=Math.max(7, Number(internalSettings.svLabelSize)||10);
+  const bg=internalSettings.svMarkerColor||'#7DCD00';
+  const fg=internalSettings.svTextColor||'#0f1a12';
+  svPointLayer=L.layerGroup();
+  Object.values(payload.points).forEach(p=>{
+    if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon))) return;
+    const html=`<span class="sv-point-label" style="width:${size}px;height:${size}px;background:${bg};color:${fg};font-size:${fs}px;line-height:${size}px;">${p.number||p.name}</span>`;
+    L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html,iconSize:[size,size],iconAnchor:[size/2,size/2]})}).bindTooltip(`${p.name||p.number}`,{sticky:true}).addTo(svPointLayer);
+  });
+  svPointLayer.addTo(map);
 }
 async function toggleSvPoints(){
   svPointsVisible=!svPointsVisible;
@@ -1981,7 +2016,7 @@ setTimeout(()=>{ classifyAdminStepCards(); setAdminSection('layout'); },300);
 
 // =========================================================
 // PATCH: Configuraciones internas, alertas, resultados, Planet y banners
-let internalSettings={stopMin:20,stopSpeed:0.3,outZone:true,svKpa:40,bannerSec:120};
+let internalSettings={stopMin:20,stopSpeed:0.3,outZone:true,svKpa:40,bannerSec:120,svMarkerSize:18,svLabelSize:10,svMarkerColor:'#7DCD00',svTextColor:'#0f1a12'};
 let lastMachineMovingTs=Date.now();
 let lastAlertKeys={};
 function showTopBanner(msg, seconds){
@@ -1990,7 +2025,7 @@ function showTopBanner(msg, seconds){
   clearTimeout(showTopBanner._t); showTopBanner._t=setTimeout(()=>el.classList.remove('show'), (seconds||internalSettings.bannerSec||120)*1000);
 }
 function loadInternalSettingsToInputs(){
-  const m={alertStopMin:'stopMin',alertStopSpeed:'stopSpeed',alertSvKpa:'svKpa',alertBannerSec:'bannerSec'};
+  const m={alertStopMin:'stopMin',alertStopSpeed:'stopSpeed',alertSvKpa:'svKpa',alertBannerSec:'bannerSec',svMarkerSize:'svMarkerSize',svLabelSize:'svLabelSize',svMarkerColor:'svMarkerColor',svTextColor:'svTextColor'};
   Object.entries(m).forEach(([id,k])=>{const el=document.getElementById(id); if(el) el.value=internalSettings[k];});
   const oz=document.getElementById('alertOutZone'); if(oz) oz.value=String(!!internalSettings.outZone);
 }
@@ -2005,7 +2040,11 @@ async function saveInternalSettings(){
     stopSpeed:Number(document.getElementById('alertStopSpeed')?.value)||0.3,
     outZone:String(document.getElementById('alertOutZone')?.value)!=='false',
     svKpa:Number(document.getElementById('alertSvKpa')?.value)||40,
-    bannerSec:Number(document.getElementById('alertBannerSec')?.value)||120
+    bannerSec:Number(document.getElementById('alertBannerSec')?.value)||120,
+    svMarkerSize:Number(document.getElementById('svMarkerSize')?.value)||18,
+    svLabelSize:Number(document.getElementById('svLabelSize')?.value)||10,
+    svMarkerColor:document.getElementById('svMarkerColor')?.value||'#7DCD00',
+    svTextColor:document.getElementById('svTextColor')?.value||'#0f1a12'
   };
   await fb.db.ref('settings/internal').set(internalSettings);
   document.getElementById('internalSettingsMsg').textContent='Configuraciones guardadas.';
@@ -2479,8 +2518,318 @@ if(document.getElementById('btnSaveShearVane')) document.getElementById('btnSave
 
 
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW error',err)));}
+
+
+// =========================================================
+// PATCH 2026-07-06: notificaciones 2 min exactos, lectura/reacción, rotación 360, SV configurable
+(function(){
+  const NOTIF_SEEN_KEY='mudmaster_notifications_seen_v2';
+  function getSeenMap(){ try{return JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY)||'{}')}catch(e){return{}} }
+  function setSeen(id){ const m=getSeenMap(); m[id]=Date.now(); localStorage.setItem(NOTIF_SEEN_KEY,JSON.stringify(m)); }
+  function parseNotificationTs(n){
+    const t=Date.parse(n.createdAt||n.ts||'');
+    return Number.isFinite(t)?t:0;
+  }
+  function scopedNotifications(){
+    return Object.entries(notificationsCache||{}).map(([id,n])=>({id,...n}))
+      .filter(n=>!n.operation||n.operation==='ALL'||n.operation===currentOperation)
+      .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  }
+  window.markNotificationRead=async function(id){
+    setSeen(id);
+    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/readBy/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({at:isoLocal(new Date())}); }catch(e){}
+    renderNotifications();
+  };
+  window.reactNotificationThumb=async function(id){
+    setSeen(id);
+    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/reactions/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({reaction:'thumbs_up',at:isoLocal(new Date())}); }catch(e){}
+    renderNotifications();
+  };
+  renderNotifications=function(){
+    const list=document.getElementById('notificationList'), cnt=document.getElementById('notificationCount');
+    const rows=scopedNotifications();
+    const seen=getSeenMap();
+    const unread=rows.filter(n=>!seen[n.id]);
+    if(list) list.innerHTML=rows.map(n=>{
+      const read=!!seen[n.id];
+      const ageMin=Math.max(0,Math.round((Date.now()-parseNotificationTs(n))/60000));
+      return `<div class="notice-item ${read?'notice-read':''}"><b>${n.operation||'ALL'}</b> · ${n.createdAt||''} · hace ${ageMin} min<br>${String(n.text||'').replace(/</g,'&lt;')}<br><span class="small">${n.author||''}</span><div class="notice-actions"><button onclick="markNotificationRead('${n.id}')">Leído</button><button onclick="reactNotificationThumb('${n.id}')">👍</button></div></div>`;
+    }).join('')||'Sin mensajes.';
+    if(cnt){ cnt.style.display=unread.length?'inline-block':'none'; cnt.textContent=unread.length>9?'9+':unread.length; }
+  };
+  const notifBtn=document.getElementById('notificationBtn');
+  if(notifBtn){ notifBtn.onclick=()=>{ document.getElementById('notificationsModal').classList.add('open'); scopedNotifications().forEach(n=>setSeen(n.id)); renderNotifications(); }; }
+  // Mostrar banner solo si el mensaje fue enviado hace menos del tiempo configurado, no cada vez que entra a la app.
+  let _lastBannerId=null;
+  const oldSubscribe=subscribeNotifications;
+  subscribeNotifications=function(){
+    if(!fb.db) return;
+    fb.db.ref('notifications').limitToLast(30).on('value',snap=>{
+      notificationsCache=snap.val()||{};
+      renderNotifications();
+      const rows=scopedNotifications(); const latest=rows[0];
+      if(!latest) return;
+      const duration=(internalSettings.bannerSec||120)*1000;
+      const age=Date.now()-parseNotificationTs(latest);
+      if(latest.id!==_lastBannerId && age>=0 && age<=duration){ _lastBannerId=latest.id; showTopBanner('📢 '+(latest.text||''), internalSettings.bannerSec||120); }
+    });
+  };
+  const rot=document.getElementById('zoneRotation'), slider=document.getElementById('zoneRotationSlider');
+  if(slider){ slider.max='360'; slider.setAttribute('max','360'); }
+  if(rot){ rot.addEventListener('change',()=>{ let v=Number(rot.value)||0; v=((v%360)+360)%360; rot.value=v; if(slider) slider.value=v; if(typeof updateZonePreview==='function') updateZonePreview(); }); }
+})();
+
 </script>
+
+
+<script>
+// =========================================================
+// PATCH 2026-07-06: Topografía 4326 con cut/fill/pendiente + SVT dashboard/import/manual
+(function(){
+  const css = document.createElement('style');
+  css.textContent = `
+    .mini-chart{width:100%;height:190px;border:1px solid var(--border);border-radius:8px;background:#081009;margin-top:8px;padding:6px;overflow:hidden;}
+    .topo-note-strong{background:#0b160d;border:1px solid var(--brand);border-radius:8px;padding:8px;margin-top:8px;color:var(--muted);font-size:11px;line-height:1.35;}
+    .inline-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .sv-manual-box{border:1px dashed var(--brand);border-radius:8px;padding:8px;margin-top:8px;background:#0f1a12;}
+    .table-scroll{max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:8px;}
+  `;
+  document.head.appendChild(css);
+
+  function htmlEscape(s){ return String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function dateRangeKeys(from,to){
+    const out=[]; if(!from||!to) return out;
+    const a=new Date(from+'T00:00:00'), b=new Date(to+'T00:00:00');
+    if(!isFinite(a)||!isFinite(b)) return out;
+    for(let d=new Date(a); d<=b; d.setDate(d.getDate()+1)) out.push(d.toISOString().slice(0,10));
+    return out;
+  }
+  function avg(nums){ nums=nums.filter(Number.isFinite); return nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null; }
+  function getSvMaxFromRecord(r){
+    const nums=[];
+    Object.values(r.readings||{}).forEach(row=>Object.values(row||{}).forEach(v=>{ const n=Number(v); if(Number.isFinite(n)) nums.push(n); }));
+    ['max_kpa','kpa','max','value'].forEach(k=>{ const n=Number(r[k]); if(Number.isFinite(n)) nums.push(n); });
+    return nums.length?Math.max(...nums):null;
+  }
+  function inferTopoEpsg(gr){
+    const prj=String(gr.projection||gr.crs||gr.projectionString||'');
+    const m=prj.match(/EPSG[:\/]*([0-9]+)/i);
+    if(m) return 'EPSG:'+m[1];
+    // georaster sometimes uses numeric 4326 in projection
+    if(String(gr.projection||'')==='4326') return 'EPSG:4326';
+    return 'desconocido';
+  }
+  function looks4326(gr){
+    const epsg=inferTopoEpsg(gr);
+    if(epsg==='EPSG:4326') return true;
+    // fallback: extents look like lon/lat
+    return Math.abs(Number(gr.xmin))<=180 && Math.abs(Number(gr.xmax))<=180 && Math.abs(Number(gr.ymin))<=90 && Math.abs(Number(gr.ymax))<=90;
+  }
+
+  function addTopoUi(){
+    const sec=document.querySelector('[data-admin-section="topografia"]'); if(!sec || sec.dataset.patchTopo2) return; sec.dataset.patchTopo2='1';
+    const note=sec.querySelector('.small');
+    if(note) note.innerHTML='Carga temporal de dos GeoTIFF <b>solo EPSG:4326 / WGS84</b>. El análisis se calcula por área operacional de la operación seleccionada. Los rasters no se guardan en nube.';
+    const grid=sec.querySelector('.dashboard-filter');
+    if(grid && !document.getElementById('topoDatumCota')){
+      grid.insertAdjacentHTML('beforeend', `
+        <div><label>Cota referencia (opcional)</label><input id="topoDatumCota" type="number" step="0.01" placeholder="Ej: 3800.00"></div>
+        <div><label>Unidad vertical</label><select id="topoZUnit"><option value="m">m</option><option value="cm">cm</option></select></div>
+      `);
+    }
+    const result=document.getElementById('topoCompareResult');
+    if(result && !document.getElementById('topoChart')){
+      result.insertAdjacentHTML('beforebegin', `<div class="topo-note-strong"><b>Especificación:</b> usar solamente <b>WGS84 / EPSG:4326</b>. <b>Muestras</b> = cantidad de puntos de grilla usados dentro del polígono y con dato válido en ambas superficies. <b>Fill</b> = Actual &gt; Anterior. <b>Cut</b> = Actual &lt; Anterior. Volúmenes aproximados = diferencia de cota × área de celda.</div><div id="topoChart" class="mini-chart">Gráfica topográfica pendiente.</div>`);
+    }
+  }
+
+  async function collectEventsAndSvForTopo(from,to,opFilter,zoneKey){
+    const days=dateRangeKeys(from,to); const evs=[]; const svs=[];
+    if(!fb || !fb.db) return {evs,svs};
+    for(const day of days){
+      try{
+        const ev=(await fb.db.ref('passEvents/'+day).once('value')).val()||{};
+        Object.values(ev).forEach(e=>{
+          const opMatch=!opFilter || String(e.operationName||e.operationCode||'').toLowerCase().includes(opFilter) || String(e.operationCode||'').toLowerCase().includes(opFilter);
+          const zoneMatch=!zoneKey || e.zoneKey===zoneKey || String(e.zoneName||'')===String(operationLayouts?.[zoneKey]?.name||'');
+          if(opMatch && zoneMatch) evs.push({...e,dateKey:day});
+        });
+      }catch(e){}
+      try{
+        const sv=(await fb.db.ref('shearVaneTests/'+day).once('value')).val()||{};
+        Object.values(sv).forEach(r=>{
+          const opMatch=!opFilter || String(r.operation||r.operacion||r.site||'').toLowerCase().includes(opFilter);
+          if(opMatch) svs.push({...r,dateKey:day,svMax:getSvMaxFromRecord(r)});
+        });
+      }catch(e){}
+    }
+    return {evs,svs};
+  }
+
+  function renderTopoChart(rows){
+    const el=document.getElementById('topoChart'); if(!el) return;
+    if(!rows.length){ el.textContent='Sin datos para graficar.'; return; }
+    const w=620,h=170,pad=24; const maxV=Math.max(1,...rows.flatMap(r=>[Math.abs(r.fill_m3||0),Math.abs(r.cut_m3||0)]));
+    const bw=Math.max(10,(w-pad*2)/Math.max(1,rows.length)/2.4);
+    const zero=h-30;
+    let svg=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%"><line x1="${pad}" y1="${zero}" x2="${w-pad}" y2="${zero}" stroke="#234a26"/>`;
+    rows.forEach((r,i)=>{
+      const x=pad+i*((w-pad*2)/rows.length)+4;
+      const fillH=(Math.abs(r.fill_m3||0)/maxV)*(h-55); const cutH=(Math.abs(r.cut_m3||0)/maxV)*(h-55);
+      svg+=`<rect x="${x}" y="${zero-fillH}" width="${bw}" height="${fillH}" fill="#2ecc71"><title>${htmlEscape(r.zona)} Fill ${Math.round(r.fill_m3||0)} m³</title></rect>`;
+      svg+=`<rect x="${x+bw+2}" y="${zero-cutH}" width="${bw}" height="${cutH}" fill="#e74c3c"><title>${htmlEscape(r.zona)} Cut ${Math.round(r.cut_m3||0)} m³</title></rect>`;
+      svg+=`<text x="${x}" y="${h-6}" fill="#8fae86" font-size="9" transform="rotate(-25 ${x},${h-6})">${htmlEscape(String(r.zona||'').slice(0,10))}</text>`;
+    });
+    svg+=`<text x="${pad}" y="12" fill="#8fae86" font-size="11">Verde=Fill · Rojo=Cut · ordenado por volumen absoluto</text></svg>`;
+    el.innerHTML=svg;
+  }
+
+  window.runTopoCompare = async function(){
+    const oldF=document.getElementById('topoOldFile')?.files?.[0], newF=document.getElementById('topoNewFile')?.files?.[0];
+    if(!oldF||!newF){ alert('Seleccione topografía anterior y actual.'); return; }
+    const el=document.getElementById('topoCompareResult'); if(el) el.textContent='Procesando rasters EPSG:4326 temporalmente...';
+    try{
+      const [oldR,newR]=await Promise.all([readRasterFile(oldF),readRasterFile(newF)]);
+      if(!looks4326(oldR)||!looks4326(newR)){
+        if(el) el.innerHTML=`<b>Error CRS:</b> ambos GeoTIFF deben estar en EPSG:4326 / WGS84. Detectado: anterior ${inferTopoEpsg(oldR)}, actual ${inferTopoEpsg(newR)}. Reexportar en QGIS a EPSG:4326.`;
+        return;
+      }
+      const gridM=Math.max(2,Number(document.getElementById('topoGridM')?.value)||2);
+      const cotaRef=Number(document.getElementById('topoDatumCota')?.value);
+      const hasCota=Number.isFinite(cotaRef);
+      const zUnit=document.getElementById('topoZUnit')?.value||'m'; const zFactor=zUnit==='cm'?0.01:1;
+      const from=document.getElementById('topoOldDate')?.value||'', to=document.getElementById('topoNewDate')?.value||'';
+      const opText=(document.getElementById('topoOperationFilter')?.value||'').trim(); const opFilter=opText.toLowerCase();
+      topoCompareRows=[];
+      const layouts=Object.entries(scopedLayouts(operationLayouts)||{});
+      for(const [zoneKey,z] of layouts){
+        if(opFilter && !(String(z.operation_name||'').toLowerCase().includes(opFilter)||String(z.operation_code||'').toLowerCase().includes(opFilter))) continue;
+        if(!z.polygon||z.polygon.length<3) continue;
+        const bb=bboxOfPolygon(z.polygon), midLat=(bb.minLat+bb.maxLat)/2, st=approxStepDegMeters(gridM,midLat);
+        const xy=makeProjector(z.polygon); const polyXY=z.polygon.map(c=>xy.toXY(c));
+        let n=0,sum=0,min=Infinity,max=-Infinity,fill=0,cut=0,above=0,below=0,slopeVals=[];
+        const cellArea=gridM*gridM;
+        for(let lat=bb.minLat; lat<=bb.maxLat; lat+=st.dLat){
+          for(let lon=bb.minLon; lon<=bb.maxLon; lon+=st.dLon){
+            if(!pointInPolyXY(xy.toXY([lat,lon]), polyXY)) continue;
+            const a0=georasterValueAt(oldR,lat,lon), b0=georasterValueAt(newR,lat,lon); if(a0===null||b0===null) continue;
+            const a=a0*zFactor, b=b0*zFactor, d=b-a;
+            n++; sum+=d; min=Math.min(min,d); max=Math.max(max,d);
+            if(d>0) fill+=d*cellArea; else cut+=Math.abs(d)*cellArea;
+            if(hasCota){ if(b>=cotaRef) above++; else below++; }
+            const be=georasterValueAt(newR,lat,lon+st.dLon), bn=georasterValueAt(newR,lat+st.dLat,lon);
+            if(be!==null && bn!==null){ const sx=((be*zFactor)-b)/gridM, sy=((bn*zFactor)-b)/gridM; slopeVals.push(Math.sqrt(sx*sx+sy*sy)*100); }
+            if(n>30000) break;
+          }
+          if(n>30000) break;
+        }
+        const areaHa=polygonAreaM2(z.polygon)/10000;
+        const {evs,svs}=await collectEventsAndSvForTopo(from,to,opFilter,zoneKey);
+        const lines=new Set(evs.map(e=>e.lineName||e.lineKey).filter(Boolean));
+        const svMaxVals=svs.map(s=>s.svMax).filter(Number.isFinite);
+        topoCompareRows.push({
+          fecha_anterior:from,fecha_actual:to,operacion:z.operation_name||'',operation_code:z.operation_code||'',zona:layoutDisplayName(z,zoneKey),area_ha:areaHa,muestras:n,
+          diff_media_m:n?sum/n:null,diff_min_m:n?min:null,diff_max_m:n?max:null,fill_m3:fill,cut_m3:cut,net_m3:fill-cut,vol_abs_m3:fill+cut,
+          cota_ref_m:hasCota?cotaRef:'',area_sobre_cota_ha:hasCota?(above*cellArea/10000):'',area_bajo_cota_ha:hasCota?(below*cellArea/10000):'',pendiente_prom_pct:avg(slopeVals),
+          cruces_periodo:evs.length,lineas_periodo:lines.size,svt_muestras:svs.length,svt_prom_kpa:avg(svMaxVals),svt_max_kpa:svMaxVals.length?Math.max(...svMaxVals):null
+        });
+      }
+      topoCompareRows.sort((a,b)=>(b.vol_abs_m3||0)-(a.vol_abs_m3||0));
+      if(el) el.innerHTML=topoCompareRows.length?`<div class="table-scroll"><table class="pass-table"><thead><tr><th>Zona</th><th>Área ha</th><th>Muestras</th><th>Fill m³</th><th>Cut m³</th><th>Net m³</th><th>Δ medio m</th><th>Pend. %</th><th>Cruces</th><th>Líneas</th><th>SVT máx</th></tr></thead><tbody>${topoCompareRows.map(r=>`<tr><td>${htmlEscape(r.zona)}</td><td>${r.area_ha.toFixed(2)}</td><td>${r.muestras}</td><td>${Math.round(r.fill_m3).toLocaleString()}</td><td>${Math.round(r.cut_m3).toLocaleString()}</td><td>${Math.round(r.net_m3).toLocaleString()}</td><td>${r.diff_media_m===null?'N/D':r.diff_media_m.toFixed(2)}</td><td>${r.pendiente_prom_pct===null?'N/D':r.pendiente_prom_pct.toFixed(1)}</td><td>${r.cruces_periodo}</td><td>${r.lineas_periodo}</td><td>${r.svt_max_kpa===null?'N/D':r.svt_max_kpa.toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`:'Sin resultados. Revise operación, fecha y que los rasters EPSG:4326 cubran las áreas.';
+      renderTopoChart(topoCompareRows);
+    }catch(e){ if(el) el.textContent='Error comparación topográfica: '+e.message; }
+  };
+  window.exportTopoCsv = function(){
+    if(!topoCompareRows.length){ alert('Primero ejecute la comparación.'); return; }
+    const head=['fecha_anterior','fecha_actual','operacion','operation_code','zona','area_ha','muestras','diff_media_m','diff_min_m','diff_max_m','fill_m3','cut_m3','net_m3','vol_abs_m3','cota_ref_m','area_sobre_cota_ha','area_bajo_cota_ha','pendiente_prom_pct','cruces_periodo','lineas_periodo','svt_muestras','svt_prom_kpa','svt_max_kpa'];
+    const rows=[head,...topoCompareRows.map(r=>head.map(k=>r[k]??''))];
+    downloadFile('comparacion_topografica_cut_fill_svt_operacion.csv', rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n'), 'text/csv');
+  };
+
+  function addSvtUi(){
+    const sec=document.querySelector('[data-admin-section="shear"]'); if(!sec || sec.dataset.patchSvt2) return; sec.dataset.patchSvt2='1';
+    const op=document.getElementById('svAdminOperation');
+    if(op && op.tagName==='INPUT'){
+      const sel=document.createElement('select'); sel.id='svAdminOperationSelect'; sel.innerHTML='<option value="Cerro Corona">Cerro Corona</option><option value="Peñasquito">Peñasquito</option><option value="ALL">Todas</option>'; sel.value=op.value||'Cerro Corona'; op.replaceWith(sel);
+    }
+    const exportBtn=document.getElementById('btnAdminExportShearCsv');
+    if(exportBtn && !document.getElementById('btnSvtDashboard')){
+      exportBtn.insertAdjacentHTML('beforebegin', `
+        <button id="btnSvtDashboard" class="btn-outline" style="width:100%;margin-top:8px;">Actualizar dashboard SVT</button>
+        <div id="svtChart" class="mini-chart">Gráfica SVT pendiente.</div>
+        <div id="svtSummaryTable" class="small">Sin consulta SVT.</div>
+        <div class="sv-manual-box"><b>Ingreso manual / CSV SVT</b>
+          <div class="dashboard-filter">
+            <div><label>Fecha</label><input id="svManualDate" type="date"></div>
+            <div><label>Operación</label><select id="svManualOperation"><option>Cerro Corona</option><option>Peñasquito</option></select></div>
+            <div><label>Punto</label><input id="svManualPoint" placeholder="Ej: AN-01"></div>
+            <div><label>MMn°</label><input id="svManualMachine" placeholder="Ej: MM27"></div>
+            <div><label>Lat</label><input id="svManualLat" type="number" step="0.0000001"></div>
+            <div><label>Lon</label><input id="svManualLon" type="number" step="0.0000001"></div>
+            <div><label>15 cm kPa</label><input id="svManual15" type="number" step="0.1"></div>
+            <div><label>30 cm kPa</label><input id="svManual30" type="number" step="0.1"></div>
+            <div><label>50 cm kPa</label><input id="svManual50" type="number" step="0.1"></div>
+            <div><label>100 cm kPa</label><input id="svManual100" type="number" step="0.1"></div>
+          </div>
+          <label>Comentario</label><textarea id="svManualComment" rows="2"></textarea>
+          <button id="btnSaveManualSvt" style="background:var(--brand);color:#0f1a12;border:none;margin-top:8px;">Guardar SVT manual</button>
+          <label>Cargar CSV SVT</label><input id="svCsvFile" type="file" accept=".csv">
+          <button id="btnImportSvtCsv" class="btn-outline" style="width:100%;margin-top:6px;">Importar CSV SVT</button>
+          <div class="small">CSV sugerido: date,operation,point,machine,lat,lon,kpa15,kpa30,kpa50,kpa100,comment.</div>
+        </div>`);
+    }
+    const d=document.getElementById('svManualDate'); if(d && !d.value) d.value=todayKey();
+  }
+  function getSvtAdminOperation(){ return document.getElementById('svAdminOperationSelect')?.value || document.getElementById('svAdminOperation')?.value || currentOperation || 'Cerro Corona'; }
+  async function loadSvtForOperation(){
+    const date=document.getElementById('svAdminDate')?.value||todayKey(); const op=getSvtAdminOperation();
+    if(!fb.db){ alert('Firebase no activo.'); return []; }
+    const snap=await fb.db.ref('shearVaneTests/'+date).once('value');
+    return Object.values(snap.val()||{}).filter(r=>op==='ALL' || String(r.operation||r.operacion||r.site||'').toLowerCase().includes(op.toLowerCase())).map(r=>({...r,svMax:getSvMaxFromRecord(r)}));
+  }
+  function renderSvtChart(rows){
+    const el=document.getElementById('svtChart'); if(!el) return;
+    if(!rows.length){ el.textContent='Sin registros SVT para graficar.'; return; }
+    const w=620,h=170,pad=24; const maxV=Math.max(40,...rows.map(r=>r.svMax||0)); const bw=Math.max(8,(w-pad*2)/rows.length*0.65);
+    let svg=`<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%"><line x1="${pad}" y1="${h-30}" x2="${w-pad}" y2="${h-30}" stroke="#234a26"/><line x1="${pad}" y1="${h-30-(40/maxV)*(h-55)}" x2="${w-pad}" y2="${h-30-(40/maxV)*(h-55)}" stroke="#e74c3c" stroke-dasharray="4,4"/><text x="${pad+4}" y="${h-34-(40/maxV)*(h-55)}" fill="#e74c3c" font-size="10">40 kPa</text>`;
+    rows.forEach((r,i)=>{ const x=pad+i*((w-pad*2)/rows.length)+4; const val=r.svMax||0, bh=(val/maxV)*(h-55); svg+=`<rect x="${x}" y="${h-30-bh}" width="${bw}" height="${bh}" fill="${val>=40?'#e74c3c':'#7DCD00'}"><title>${htmlEscape(r.point||i+1)} ${val} kPa</title></rect><text x="${x}" y="${h-6}" fill="#8fae86" font-size="9" transform="rotate(-25 ${x},${h-6})">${htmlEscape(String(r.point||i+1).slice(0,8))}</text>`; });
+    svg+='</svg>'; el.innerHTML=svg;
+  }
+  async function updateSvtDashboard(){
+    const rows=await loadSvtForOperation(); const el=document.getElementById('svtSummaryTable'); const vals=rows.map(r=>r.svMax).filter(Number.isFinite);
+    if(el) el.innerHTML=rows.length?`<div><b>Registros:</b> ${rows.length} · <b>Prom:</b> ${avg(vals)?.toFixed(1)||'N/D'} kPa · <b>Máx:</b> ${vals.length?Math.max(...vals).toFixed(1):'N/D'} kPa · <b>Alertas ≥40:</b> ${vals.filter(v=>v>=40).length}</div><div class="table-scroll"><table class="pass-table"><thead><tr><th>Punto</th><th>Operación</th><th>MM</th><th>Máx kPa</th><th>Comentario</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${htmlEscape(r.point||'')}</td><td>${htmlEscape(r.operation||'')}</td><td>${htmlEscape(r.machine||r.maquina||'')}</td><td>${r.svMax??''}</td><td>${htmlEscape(r.comment||'')}</td></tr>`).join('')}</tbody></table></div>`:'Sin registros SVT para esa operación/fecha.';
+    renderSvtChart(rows);
+  }
+  async function saveManualSvt(){
+    if(!fb.db){ alert('Firebase no activo.'); return; }
+    const date=document.getElementById('svManualDate')?.value||todayKey();
+    const rec={operation:document.getElementById('svManualOperation')?.value||'Cerro Corona',point:document.getElementById('svManualPoint')?.value||'',machine:document.getElementById('svManualMachine')?.value||'',lat:Number(document.getElementById('svManualLat')?.value)||null,lon:Number(document.getElementById('svManualLon')?.value)||null,comment:document.getElementById('svManualComment')?.value||'',createdAt:new Date().toISOString(),manual:true,readings:{center:{'15cm':Number(document.getElementById('svManual15')?.value)||null,'30cm':Number(document.getElementById('svManual30')?.value)||null,'50cm':Number(document.getElementById('svManual50')?.value)||null,'100cm':Number(document.getElementById('svManual100')?.value)||null}}};
+    await fb.db.ref('shearVaneTests/'+date).push(rec); alert('SVT manual guardado.'); updateSvtDashboard();
+  }
+  function parseCsvLine(line){ const out=[]; let cur='',q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; } else if(ch===','&&!q){ out.push(cur); cur=''; } else cur+=ch; } out.push(cur); return out; }
+  async function importSvtCsv(){
+    if(!fb.db){ alert('Firebase no activo.'); return; }
+    const f=document.getElementById('svCsvFile')?.files?.[0]; if(!f){ alert('Seleccione CSV.'); return; }
+    const lines=(await f.text()).split(/\r?\n/).filter(Boolean); if(lines.length<2) return;
+    const head=parseCsvLine(lines[0]).map(h=>h.trim().toLowerCase()); let n=0;
+    for(const line of lines.slice(1)){
+      const vals=parseCsvLine(line); const obj={}; head.forEach((h,i)=>obj[h]=vals[i]);
+      const date=obj.date||obj.fecha||todayKey(); const rec={operation:obj.operation||obj.operacion||'Cerro Corona',point:obj.point||obj.punto||'',machine:obj.machine||obj.mm||'',lat:Number(obj.lat)||null,lon:Number(obj.lon)||null,comment:obj.comment||obj.comentario||'',createdAt:new Date().toISOString(),manual_csv:true,readings:{center:{'15cm':Number(obj.kpa15||obj['15cm'])||null,'30cm':Number(obj.kpa30||obj['30cm'])||null,'50cm':Number(obj.kpa50||obj['50cm'])||null,'100cm':Number(obj.kpa100||obj['100cm'])||null}}};
+      await fb.db.ref('shearVaneTests/'+date).push(rec); n++;
+    }
+    alert(`${n} registros SVT importados.`); updateSvtDashboard();
+  }
+
+  setTimeout(()=>{
+    addTopoUi(); addSvtUi();
+    const a=document.getElementById('btnRunTopoCompare'); if(a)a.onclick=window.runTopoCompare;
+    const b=document.getElementById('btnExportTopoCsv'); if(b)b.onclick=window.exportTopoCsv;
+    const c=document.getElementById('btnSvtDashboard'); if(c)c.onclick=updateSvtDashboard;
+    const d=document.getElementById('btnSaveManualSvt'); if(d)d.onclick=saveManualSvt;
+    const e=document.getElementById('btnImportSvtCsv'); if(e)e.onclick=importSvtCsv;
+  },800);
+})();
+</script>
+
 </body>
 </html>
-
-
