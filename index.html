@@ -3119,6 +3119,264 @@ if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWo
   },1000);
 })();
 
+
+
+// =========================================================
+// PATCH 2026-07-06D: Biblioteca Capas QGIS completa sobre HTML vigente
+// Incluye sharedLayers + Áreas/layouts + puntos SVT planificados y fuerza refresh visible.
+window.__mudmaster_patch_version = '2026-07-06D_capas_full';
+let svPlannedPointsLibraryData = window.svPlannedPointsLibraryData || {};
+function opCodeForLibrary(op){
+  try{ return (OPERATION_PROFILES && OPERATION_PROFILES[op] && OPERATION_PROFILES[op].code) || makeOperationCode(op) || 'GEN'; }
+  catch(e){ return makeOperationCode(op)||'GEN'; }
+}
+function opLabelForLibrary(op){ return op==='ALL' ? 'General / Todas' : (op || 'General'); }
+function inLibraryScope(meta){
+  if(!meta) return true;
+  if(fb && fb.admin && !fb.supervisor) return true;
+  if(window.layerMatchesScope) return layerMatchesScope(meta);
+  return true;
+}
+function addLibItem(groups, op, category, item){
+  op = op || 'ALL';
+  if(!inLibraryScope({operation:op, operationCode:item.operationCode})) return;
+  groups[op] = groups[op] || {};
+  groups[op][category] = groups[op][category] || [];
+  groups[op][category].push(item);
+}
+window.renderLayerLibraryTree = function(data){
+  const el=document.getElementById('layerLibraryTree');
+  if(!el) return;
+  const groups={};
+  data = data || sharedLayerData || {kmls:{},tifs:{},images:{}};
+  Object.entries(data.images||{}).forEach(([id,rec])=>addLibItem(groups, rec.operation||'ALL', rec.layerCategory||'Fotos / ortofotos', {id,type:'image',rec,operationCode:rec.operationCode}));
+  Object.entries(data.kmls||{}).forEach(([id,rec])=>addLibItem(groups, rec.operation||'ALL', rec.layerCategory||'KML / KMZ', {id,type:'kml',rec,operationCode:rec.operationCode}));
+  Object.entries(data.tifs||{}).forEach(([id,rec])=>addLibItem(groups, rec.operation||'ALL', rec.layerCategory||'TIF / GeoTIFF', {id,type:'tif',rec,operationCode:rec.operationCode}));
+
+  // Áreas operacionales/layouts generados automáticamente
+  Object.entries(operationLayouts||{}).forEach(([zoneKey,z])=>{
+    const op=z.operation_name || z.operation || 'ALL';
+    const rec={name:layoutDisplayName(z,zoneKey), description:layoutDisplayName(z,zoneKey), updatedAt:z.updatedAt||'', critical:true, defaultVisible:zoneVisible(zoneKey), zoneKey, operation:op, operationCode:z.operation_code||opCodeForLibrary(op)};
+    addLibItem(groups, op, 'Áreas operacionales', {id:zoneKey,type:'layout',rec,operationCode:rec.operationCode});
+  });
+
+  // Puntos SVT planificados guardados por operación
+  Object.entries(svPlannedPointsLibraryData||{}).forEach(([opKey,payload])=>{
+    const op=payload.operation || opKey || 'ALL';
+    const n=Object.keys(payload.points||{}).length;
+    const rec={name:payload.source||('Puntos SVT '+op), description:`Puntos SVT planificados (${n})`, updatedAt:payload.updatedAt||'', critical:true, defaultVisible:false, operation:op, operationCode:opCodeForLibrary(op), payloadKey:opKey};
+    addLibItem(groups, op, 'Puntos SVT', {id:opKey,type:'svt',rec,operationCode:rec.operationCode});
+  });
+
+  if(!Object.keys(groups).length){ el.innerHTML='<div class="small">Sin capas en biblioteca. Suba ortofotos/KML o genere áreas/layouts para esta operación.</div>'; return; }
+  el.innerHTML=Object.entries(groups).sort((a,b)=>opLabelForLibrary(a[0]).localeCompare(opLabelForLibrary(b[0]))).map(([op,cats])=>{
+    const opCount=Object.values(cats).reduce((a,arr)=>a+arr.length,0);
+    const catHtml=Object.entries(cats).sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,items])=>{
+      const rows=items.map(({id,type,rec})=>{
+        let visible=false, fixed=rec.critical?'🔒 ':'';
+        if(type==='layout') visible=zoneVisible(id);
+        else if(type==='svt') visible=svPointsVisible;
+        else visible=isLayerVisible(id);
+        const checked=visible?'checked':'';
+        const name=rec.description||rec.name||id;
+        const meta=[rec.name||'', rec.updatedAt||'', visible?'visible':'oculta'].filter(Boolean).join(' · ');
+        let actions='';
+        if(type==='layout') actions=`<button onclick="zoomToOperationZone('${id}')">Zoom</button><button onclick="editOperationZone('${id}')">Editar</button><button onclick="exportZoneKML('${id}')">KML</button><button onclick="exportZoneGeoJSON('${id}')">GeoJSON</button>`;
+        else if(type==='svt') actions=`<button onclick="window.zoomSvPlannedFromLibrary&&zoomSvPlannedFromLibrary('${id}')">Zoom</button><button onclick="window.exportSvPlannedFromLibrary&&exportSvPlannedFromLibrary('${id}')">GeoJSON</button>`;
+        else actions=`<button onclick="zoomToSharedLayer('${id}')">Zoom</button><button onclick="exportManagedLayer('${id}')">Exportar</button>${(fb&&fb.admin&&!rec.critical)?`<button onclick="deleteSharedLayer('${id}')">Eliminar</button>`:''}`;
+        const onchange = type==='layout' ? `toggleZoneLayout('${id}', this.checked); renderLayerLibraryTree(sharedLayerData);` : type==='svt' ? `window.toggleSvPlannedFromLibrary&&window.toggleSvPlannedFromLibrary('${id}', this.checked);` : `toggleSharedLayer('${id}', this.checked); renderLayerLibraryTree(sharedLayerData);`;
+        return `<div class="qgis-layer-row"><input type="checkbox" ${checked} onchange="${onchange}"><div><div class="qgis-layer-name">${fixed}${htmlEscape(type.toUpperCase())} · ${htmlEscape(name)}</div><div class="qgis-layer-meta">${htmlEscape(meta)}</div></div><div class="qgis-layer-actions">${actions}</div></div>`;
+      }).join('');
+      return `<div class="qgis-type-folder"><div class="qgis-type-head" onclick="this.parentElement.classList.toggle('qgis-collapsed')"><span>📁 ${htmlEscape(cat)}</span><span>${items.length}</span></div><div class="qgis-folder-body qgis-type-body">${rows}</div></div>`;
+    }).join('');
+    return `<div class="qgis-op-folder"><div class="qgis-op-head" onclick="this.parentElement.classList.toggle('qgis-collapsed')"><span>🌎 ${htmlEscape(opLabelForLibrary(op))}</span><span>${opCount} elemento(s)</span></div><div class="qgis-folder-body">${catHtml}</div></div>`;
+  }).join('');
+};
+
+// Funciones SVT desde biblioteca
+window.toggleSvPlannedFromLibrary = async function(opKey, visible){
+  svPointsVisible=!!visible;
+  const payload=svPlannedPointsLibraryData[opKey];
+  if(payload) renderSvPlannedPoints(payload);
+  renderLayerLibraryTree(sharedLayerData);
+};
+window.zoomSvPlannedFromLibrary = function(opKey){
+  const payload=svPlannedPointsLibraryData[opKey];
+  if(!payload||!payload.points){ alert('No hay puntos SVT para esta operación.'); return; }
+  const pts=Object.values(payload.points).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map(p=>[Number(p.lat),Number(p.lon)]);
+  if(!pts.length){ alert('Los puntos SVT no tienen coordenadas válidas.'); return; }
+  map.fitBounds(L.latLngBounds(pts),{padding:[25,25]}); showMap();
+};
+window.exportSvPlannedFromLibrary = function(opKey){
+  const payload=svPlannedPointsLibraryData[opKey];
+  if(!payload||!payload.points){ alert('No hay puntos SVT para exportar.'); return; }
+  const features=Object.values(payload.points).filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map(p=>({type:'Feature',properties:{name:p.name||p.number,number:p.number,operation:payload.operation||opKey,...(p.properties||{})},geometry:{type:'Point',coordinates:[Number(p.lon),Number(p.lat)]}}));
+  downloadFile(`${safeKey(payload.operation||opKey)}_puntos_svt.geojson`, JSON.stringify({type:'FeatureCollection',features},null,2), 'application/geo+json');
+};
+
+// Suscripciones y refrescos cruzados para que Capas muestre TODO lo existente
+(function(){
+  const oldSubscribeLayouts=window.subscribeOperationLayouts || subscribeOperationLayouts;
+  window.subscribeOperationLayouts=function(){
+    oldSubscribeLayouts();
+    if(fb.db){
+      fb.db.ref('shearVanePlannedPoints').on('value',snap=>{ svPlannedPointsLibraryData=snap.val()||{}; renderLayerLibraryTree(sharedLayerData); });
+    }
+  };
+  const oldRenderTree=window.renderOperationTree || renderOperationTree;
+  window.renderOperationTree=function(){ const r=oldRenderTree.apply(this,arguments); renderLayerLibraryTree(sharedLayerData); return r; };
+  const oldRenderLayouts=window.renderOperationLayouts || renderOperationLayouts;
+  window.renderOperationLayouts=function(){ const r=oldRenderLayouts.apply(this,arguments); renderLayerLibraryTree(sharedLayerData); return r; };
+  const refreshBtn=document.getElementById('btnRefreshLayerLibrary');
+  if(refreshBtn) refreshBtn.onclick=()=>renderLayerLibraryTree(sharedLayerData);
+  setTimeout(()=>renderLayerLibraryTree(sharedLayerData),700);
+})();
+console.log('MudMaster Tracker patch activo:', window.__mudmaster_patch_version);
+
+
+
+// =========================================================
+// PATCH 2026-07-06E: RESTAURACIÓN CAPAS / ORTOFOTOS / ÁREAS
+// Base: último HTML vigente. Este bloque NO borra datos Firebase; solo corrige lectura/visibilidad.
+window.__mudmaster_patch_version = '2026-07-06E_capas_restore';
+(function(){
+  function opCodeSafe(op){
+    try { return (OPERATION_PROFILES && OPERATION_PROFILES[op] && OPERATION_PROFILES[op].code) || makeOperationCode(op) || 'GEN'; }
+    catch(e){ return 'GEN'; }
+  }
+  function activeScope(){
+    try { if(fb && fb.supervisor && fb.supervisorOperation) return fb.supervisorOperation; } catch(e){}
+    try { return currentOperation || document.getElementById('activeOperation')?.value || document.getElementById('loginOperation')?.value || 'Cerro Corona'; } catch(e){ return 'Cerro Corona'; }
+  }
+  function isAdminAll(){ return !!(fb && fb.admin && !fb.supervisor); }
+  function normalizeOpName(op){ return String(op||'').trim(); }
+  window.__layerBelongsToScope = function(rec){
+    if(isAdminAll()) return true;
+    if(!rec) return true;
+    const op=activeScope();
+    const recOp=normalizeOpName(rec.operation || rec.operation_name || rec.operacion || rec.site || '');
+    const recCode=String(rec.operationCode || rec.operation_code || '').toUpperCase();
+    const opCode=opCodeSafe(op).toUpperCase();
+    if(!recOp || recOp==='ALL' || recOp==='General' || recOp==='General / Todas') return true;
+    return recOp===op || recCode===opCode;
+  };
+  window.layerMatchesScope = window.__layerBelongsToScope;
+
+  window.__layerVisible = function(id, rec){
+    const stored=localStorage.getItem('layer_visible_'+id);
+    if(rec && rec.critical && rec.defaultVisible !== false) return true; // capas definitivas deben reaparecer por defecto
+    if(stored!==null) return stored==='true';
+    if(rec && rec.defaultVisible===false) return false;
+    return true;
+  };
+  try { isLayerVisible = function(id){ return window.__layerVisible(id, getSharedLayerMeta(id)); }; window.isLayerVisible=isLayerVisible; } catch(e){}
+
+  function safeHtml(s){
+    try { return String(s==null?'':s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+    catch(e){ return String(s||''); }
+  }
+  function layerTypeName(type){ return type==='images'?'IMG':type==='kmls'?'KML':type==='tifs'?'TIF':type; }
+  function getAllScopedShared(data){
+    const out={kmls:{},tifs:{},images:{}};
+    ['kmls','tifs','images'].forEach(t=>Object.entries((data||{})[t]||{}).forEach(([id,rec])=>{ if(window.__layerBelongsToScope(rec)) out[t][id]=rec; }));
+    return out;
+  }
+
+  window.renderLayerControls = function(data){
+    const el=document.getElementById('layerControlList');
+    if(!el) return;
+    const scoped=getAllScopedShared(data||sharedLayerData||{});
+    const rows=[];
+    ['images','kmls','tifs'].forEach(type=>{
+      Object.entries(scoped[type]||{}).forEach(([id,rec])=>{
+        const visible=window.__layerVisible(id,rec);
+        const checked=visible?'checked':'';
+        const fixed=rec.critical?' 🔒':'';
+        const typeLabel=layerTypeName(type);
+        const name=rec.description||rec.name||id;
+        const status=visible?'<span class="layer-status on">Visible</span>':'<span class="layer-status off">Oculto</span>';
+        const del=(fb&&fb.admin&&!rec.critical)?`<button onclick="deleteSharedLayer('${id}')">Eliminar</button>`:'';
+        rows.push(`<div class="layer-control-item ${rec.critical?'critical-layer':''}"><label><input type="checkbox" ${checked} onchange="toggleSharedLayer('${id}', this.checked)"><span><b>${typeLabel}</b>${fixed} ${safeHtml(name)}<br><small>${safeHtml(rec.operation||'General')} · ${safeHtml(rec.updatedAt||'')}</small><br>${status}</span></label><button onclick="zoomToSharedLayer('${id}')" style="border-color:var(--brand);color:var(--brand);">Zoom</button>${del}</div>`);
+      });
+    });
+    el.innerHTML=rows.join('')||'<div class="small">Sin capas operacionales para esta operación.</div>';
+  };
+
+  window.renderAllSharedLayers = function(data){
+    const scoped=getAllScopedShared(data||sharedLayerData||{});
+    // quitar del mapa lo que no pertenece a la operación activa, pero sin borrar de Firebase
+    Object.keys(sharedImageLayers||{}).forEach(id=>{ if(!scoped.images[id] || !window.__layerVisible(id,scoped.images[id])) removeOperationalLayer(id); });
+    Object.keys(sharedKmlLayers||{}).forEach(id=>{ if(!scoped.kmls[id] || !window.__layerVisible(id,scoped.kmls[id])) removeOperationalLayer(id); });
+    Object.keys(sharedTifLayers||{}).forEach(id=>{ if(!scoped.tifs[id] || !window.__layerVisible(id,scoped.tifs[id])) removeOperationalLayer(id); });
+    Object.entries(scoped.images||{}).forEach(([id,rec])=>{ if(window.__layerVisible(id,rec)) renderSharedImage(id,rec); });
+    Object.entries(scoped.kmls||{}).forEach(([id,rec])=>{ if(window.__layerVisible(id,rec)) renderSharedKML(id,rec); });
+    Object.entries(scoped.tifs||{}).forEach(([id,rec])=>{ if(window.__layerVisible(id,rec)) renderSharedTIF(id,rec); });
+  };
+
+  window.toggleSharedLayer = function(id, visible){
+    setLayerVisible(id, visible);
+    if(!visible){ removeOperationalLayer(id); renderLayerControls(sharedLayerData); renderLayerLibraryTree(sharedLayerData); return; }
+    const rec=(sharedLayerData.images&&sharedLayerData.images[id])||(sharedLayerData.kmls&&sharedLayerData.kmls[id])||(sharedLayerData.tifs&&sharedLayerData.tifs[id]);
+    if(sharedLayerData.images && sharedLayerData.images[id]) renderSharedImage(id, sharedLayerData.images[id]);
+    if(sharedLayerData.kmls && sharedLayerData.kmls[id]) renderSharedKML(id, sharedLayerData.kmls[id]);
+    if(sharedLayerData.tifs && sharedLayerData.tifs[id]) renderSharedTIF(id, sharedLayerData.tifs[id]);
+    renderLayerControls(sharedLayerData); renderLayerLibraryTree(sharedLayerData);
+  };
+
+  window.renderLayerLibraryTree = function(data){
+    const el=document.getElementById('layerLibraryTree');
+    if(!el) return;
+    const groups={};
+    function add(op,cat,item){
+      op=op||'ALL'; if(!isAdminAll() && !window.__layerBelongsToScope({operation:op,operationCode:item.rec&&item.rec.operationCode})) return;
+      groups[op]=groups[op]||{}; groups[op][cat]=groups[op][cat]||[]; groups[op][cat].push(item);
+    }
+    const shared=data||sharedLayerData||{};
+    Object.entries(shared.images||{}).forEach(([id,rec])=>add(rec.operation||'ALL', rec.layerCategory||'Fotos / ortofotos', {id,type:'image',rec}));
+    Object.entries(shared.kmls||{}).forEach(([id,rec])=>add(rec.operation||'ALL', rec.layerCategory||'KML / KMZ', {id,type:'kml',rec}));
+    Object.entries(shared.tifs||{}).forEach(([id,rec])=>add(rec.operation||'ALL', rec.layerCategory||'TIF / GeoTIFF', {id,type:'tif',rec}));
+    Object.entries(operationLayouts||{}).forEach(([id,z])=>{
+      const op=z.operation_name||z.operation||'ALL';
+      add(op,'Áreas operacionales',{id,type:'layout',rec:{name:layoutDisplayName(z,id),operation:op,critical:true,updatedAt:z.updatedAt||'',zoneKey:id}});
+    });
+    Object.entries(window.svPlannedPointsLibraryData||svPlannedPointsLibraryData||{}).forEach(([id,payload])=>{
+      const op=payload.operation||id||'ALL';
+      const n=Object.keys(payload.points||{}).length;
+      add(op,'Puntos SVT',{id,type:'svt',rec:{name:(payload.source||'Puntos SVT')+` (${n})`,operation:op,critical:true,updatedAt:payload.updatedAt||'',payloadKey:id}});
+    });
+    if(!Object.keys(groups).length){ el.innerHTML='<div class="small">Sin capas en biblioteca para esta operación.</div>'; return; }
+    el.innerHTML=Object.entries(groups).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([op,cats])=>{
+      const total=Object.values(cats).reduce((a,v)=>a+v.length,0);
+      const catsHtml=Object.entries(cats).sort((a,b)=>a[0].localeCompare(b[0])).map(([cat,items])=>{
+        const rows=items.map(({id,type,rec})=>{
+          let visible=false;
+          if(type==='layout') visible=zoneVisible(id);
+          else if(type==='svt') visible=!!window.svPointsVisible;
+          else visible=window.__layerVisible(id,rec);
+          const checked=visible?'checked':'';
+          let actions='';
+          if(type==='layout') actions=`<button onclick="zoomToOperationZone('${id}')">Zoom</button><button onclick="editOperationZone('${id}')">Editar</button><button onclick="exportZoneKML('${id}')">KML</button><button onclick="exportZoneGeoJSON('${id}')">GeoJSON</button>`;
+          else if(type==='svt') actions=`<button onclick="zoomSvPlannedFromLibrary&&zoomSvPlannedFromLibrary('${id}')">Zoom</button><button onclick="exportSvPlannedFromLibrary&&exportSvPlannedFromLibrary('${id}')">GeoJSON</button>`;
+          else actions=`<button onclick="zoomToSharedLayer('${id}')">Zoom</button><button onclick="exportManagedLayer&&exportManagedLayer('${id}')">Exportar</button>${(fb&&fb.admin&&!rec.critical)?`<button onclick="deleteSharedLayer('${id}')">Eliminar</button>`:''}`;
+          const onchange=type==='layout'?`toggleZoneLayout('${id}', this.checked); renderLayerLibraryTree(sharedLayerData);`:type==='svt'?`toggleSvPlannedFromLibrary&&toggleSvPlannedFromLibrary('${id}', this.checked);`:`toggleSharedLayer('${id}', this.checked);`;
+          return `<div class="qgis-layer-row"><input type="checkbox" ${checked} onchange="${onchange}"><div><div class="qgis-layer-name">${rec.critical?'🔒 ':''}${safeHtml(type.toUpperCase())} · ${safeHtml(rec.description||rec.name||id)}</div><div class="qgis-layer-meta">${safeHtml(rec.updatedAt||'')} · ${visible?'visible':'oculta'}</div></div><div class="qgis-layer-actions">${actions}</div></div>`;
+        }).join('');
+        return `<div class="qgis-type-folder"><div class="qgis-type-head" onclick="this.parentElement.classList.toggle('qgis-collapsed')"><span>📁 ${safeHtml(cat)}</span><span>${items.length}</span></div><div class="qgis-folder-body qgis-type-body">${rows}</div></div>`;
+      }).join('');
+      return `<div class="qgis-op-folder"><div class="qgis-op-head" onclick="this.parentElement.classList.toggle('qgis-collapsed')"><span>🌎 ${safeHtml(op==='ALL'?'General / Todas':op)}</span><span>${total} elemento(s)</span></div><div class="qgis-folder-body">${catsHtml}</div></div>`;
+    }).join('');
+  };
+
+  // refresco completo para recuperar lo ya existente sin tocar Firebase
+  window.forceRefreshOperationalLayers = function(){
+    try{ renderLayerControls(sharedLayerData); renderAllSharedLayers(sharedLayerData); renderLayerLibraryTree(sharedLayerData); renderOperationLayouts(); renderOperationTree(); }catch(e){ console.error('forceRefreshOperationalLayers',e); }
+  };
+  const oldSetCurrentOperation = window.setCurrentOperation || setCurrentOperation;
+  window.setCurrentOperation = function(op){ const r=oldSetCurrentOperation(op); setTimeout(()=>forceRefreshOperationalLayers(),250); return r; };
+  setTimeout(forceRefreshOperationalLayers,1200);
+  console.log('MudMaster Tracker patch activo:', window.__mudmaster_patch_version);
+})();
+
 </script>
 
 <div id="chartExpandModal"><div id="chartExpandCard"><div id="chartExpandHeader"><span id="chartExpandTitle">Gráfica ampliada</span><button id="btnCloseChartExpand" class="btn-outline" style="width:auto;margin:0;">Cerrar</button></div><div id="chartExpandContent"></div></div></div>
