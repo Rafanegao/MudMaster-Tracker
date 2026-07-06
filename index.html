@@ -322,7 +322,7 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
       <h2>Solicitud de Apoyo</h2><button id="btnApoyo" class="btn-warn">🚧 Reportar Solicitud de Apoyo</button>
       <h2>Ensayo Shear Vane</h2><button id="btnOpenShearVane" class="btn-outline" style="width:100%;">🧪 Registrar Shear Vane</button><div class="small">Usa la ubicación actual del iPad para georreferenciar el punto.</div>
       <h2>Capas Operacionales</h2><div class="small">Active o desactive KML/TIF/Imagen cargados por el administrador.</div><div id="layerControlList" class="small">Sin capas operacionales.</div>
-      <label style="display:flex;align-items:center;gap:6px;margin-top:10px;"><input type="checkbox" id="operatorShowLayout"> Mostrar avance / líneas operativas</label>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:10px;"><input type="checkbox" id="operatorShowLayout" checked> Mostrar avance / líneas operativas</label>
       <div class="small">Las líneas parámetro INICIO/FINAL son visibles solo para admin.</div>
       <h2>Trabajo anterior / Seguimiento</h2><div class="small">Carga recorridos anteriores de esta MM para ver dónde se detuvo la operación.</div><button id="btnLoadPrevious" class="btn-outline" style="width:100%;margin-top:8px;">Buscar trabajos anteriores</button><div id="previousList"></div>
       <h2>Historial local / KML</h2><div id="historyList"></div>
@@ -3563,6 +3563,195 @@ async function saveShearVaneLinked(){
   }catch(e){}
 }
 if(document.getElementById('btnSaveShearVane')) document.getElementById('btnSaveShearVane').onclick=saveShearVaneLinked;
+
+
+/* PATCH 2026-07-06G - Etiquetas visibles con nombre de área operacional */
+window.__mudmaster_patch_version = '2026-07-06G_area_labels';
+(function(){
+  if(document.getElementById('mudmaster-area-label-style')) return;
+  const st=document.createElement('style');
+  st.id='mudmaster-area-label-style';
+  st.textContent=`
+    .area-name-label{
+      background:rgba(10,20,12,.92);
+      border:2px solid var(--brand);
+      color:var(--brand);
+      border-radius:999px;
+      padding:4px 10px;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      box-shadow:0 3px 12px rgba(0,0,0,.55);
+      text-align:center;
+    }
+    .area-name-label.operator{border-color:#ffffff;color:#ffffff;background:rgba(10,20,12,.86);}
+  `;
+  document.head.appendChild(st);
+})();
+let operationAreaNameLabelsLayer=null;
+function areaLabelPoint(coords){
+  if(!coords||!coords.length) return null;
+  let lat=0,lng=0,n=0;
+  coords.forEach(c=>{ if(Array.isArray(c)&&Number.isFinite(Number(c[0]))&&Number.isFinite(Number(c[1]))){lat+=Number(c[0]);lng+=Number(c[1]);n++;} });
+  if(!n) return null;
+  return [lat/n,lng/n];
+}
+function renderOperationAreaNameLabels(){
+  try{ if(operationAreaNameLabelsLayer){ map.removeLayer(operationAreaNameLabelsLayer); operationAreaNameLabelsLayer=null; } }catch(e){}
+  const show=document.getElementById('showControlLines');
+  const operatorToggle=document.getElementById('operatorShowLayout');
+  const isAdminView=!!(fb.admin||fb.supervisor);
+  const allowView=isAdminView || (operatorToggle && operatorToggle.checked);
+  if(!allowView) return;
+  if(isAdminView && show && !show.checked) return;
+  const group=L.layerGroup();
+  Object.entries(scopedLayouts(operationLayouts)||{}).forEach(([zoneKey,z])=>{
+    if(!zoneVisible(zoneKey) || !z || !z.polygon) return;
+    const p=areaLabelPoint(z.polygon); if(!p) return;
+    const name=layoutDisplayName(z,zoneKey);
+    L.marker(p,{interactive:false,icon:L.divIcon({className:'',html:`<div class="area-name-label ${isAdminView?'':'operator'}">${String(name).replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m]))}</div>`,iconSize:[160,28],iconAnchor:[80,14]})}).addTo(group);
+  });
+  group.addTo(map); operationAreaNameLabelsLayer=group;
+}
+(function(){
+  const previousRenderOperationLayouts=renderOperationLayouts;
+  renderOperationLayouts=function(){
+    const result=previousRenderOperationLayouts.apply(this,arguments);
+    try{ renderOperationAreaNameLabels(); }catch(e){ console.warn('No se pudieron mostrar nombres de áreas',e); }
+    return result;
+  };
+  setTimeout(()=>{ try{ renderOperationLayouts(); }catch(e){} },300);
+})();
+
+
+
+/* =========================================================
+   PATCH 2026-07-06H: botón reubicar GPS + capas operacionales/SVT visibles por defecto
+   - Operador entra y ve líneas operacionales y puntos SVT de su operación automáticamente.
+   - Puede ocultarlos manualmente desde el checkbox/botón existente.
+   - Botón flotante tipo Google Maps para volver a centrar en la MM/GPS actual.
+========================================================= */
+window.__mudmaster_patch_version = '2026-07-06H_reubicar_layout_svt_default';
+(function(){
+  const css = `
+    #btnRecenterGpsMap{
+      position:absolute;right:14px;top:82px;z-index:1150;width:46px;height:46px;margin:0;padding:0;
+      border-radius:50%;border:2px solid var(--brand);background:rgba(15,26,18,.94);color:var(--brand);
+      font-size:21px;line-height:1;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 16px rgba(0,0,0,.45);
+    }
+    #btnRecenterGpsMap.following{background:var(--brand);color:#0f1a12;}
+    #btnRecenterGpsMap:active{transform:scale(.96);}
+    #operatorShowLayout:checked + span{color:var(--brand);}
+  `;
+  const st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
+
+  // Botón flotante de reubicar / seguir GPS, tipo Google Maps.
+  function ensureRecenterButton(){
+    const mapDiv=document.getElementById('map');
+    if(!mapDiv || document.getElementById('btnRecenterGpsMap')) return;
+    const btn=document.createElement('button');
+    btn.id='btnRecenterGpsMap';
+    btn.type='button';
+    btn.title='Reubicar / seguir mi MudMaster';
+    btn.innerHTML='⌖';
+    btn.className='following';
+    btn.onclick=function(){
+      window.mmGpsFollowUser=true;
+      btn.classList.add('following');
+      try{
+        const target = (typeof lastLatLng!=='undefined' && lastLatLng) ? lastLatLng : null;
+        if(target && Array.isArray(target)){
+          const z=Math.max(map.getZoom()||16,17);
+          if(window.__mmOriginalSetView) window.__mmOriginalSetView.call(map,target,z,{animate:true});
+          else map.setView(target,z,{animate:true});
+        } else if(typeof ownMarker!=='undefined' && ownMarker && ownMarker.getLatLng){
+          const ll=ownMarker.getLatLng();
+          const z=Math.max(map.getZoom()||16,17);
+          if(window.__mmOriginalSetView) window.__mmOriginalSetView.call(map,ll,z,{animate:true});
+          else map.setView(ll,z,{animate:true});
+        } else {
+          alert('Aún no hay posición GPS registrada para reubicar.');
+        }
+      }catch(e){ console.warn('No se pudo reubicar GPS',e); }
+    };
+    mapDiv.appendChild(btn);
+  }
+
+  window.mmGpsFollowUser = true;
+  try{
+    if(!window.__mmOriginalPanTo){
+      window.__mmOriginalPanTo = map.panTo;
+      map.panTo = function(latlng, options){
+        // Durante jornada, permitir que el operador explore el mapa; solo seguir si está en modo follow.
+        try{
+          if(typeof jornadaActiva!=='undefined' && jornadaActiva && window.mmGpsFollowUser===false){ return this; }
+        }catch(e){}
+        return window.__mmOriginalPanTo.call(this, latlng, options);
+      };
+    }
+    if(!window.__mmOriginalSetView){ window.__mmOriginalSetView = map.setView; }
+    map.on('dragstart zoomstart', function(){
+      try{
+        if(typeof jornadaActiva!=='undefined' && jornadaActiva){
+          window.mmGpsFollowUser=false;
+          const b=document.getElementById('btnRecenterGpsMap'); if(b) b.classList.remove('following');
+        }
+      }catch(e){}
+    });
+  }catch(e){ console.warn('No se pudo preparar seguimiento GPS',e); }
+
+  function forceOperationalDefaults(){
+    const opToggle=document.getElementById('operatorShowLayout');
+    if(opToggle){
+      // Siempre iniciar marcado para operadores. Si el operador lo desmarca, se oculta solo en esa sesión.
+      opToggle.checked=true;
+      try{ localStorage.removeItem('operatorShowLayout'); localStorage.setItem('operatorShowLayoutDefaulted','1'); }catch(e){}
+    }
+    try{ if(typeof renderOperationLayouts==='function') renderOperationLayouts(); }catch(e){ console.warn('No se pudieron renderizar líneas operacionales',e); }
+  }
+
+  async function showSvtPointsForCurrentOperation(){
+    try{
+      if(!fb || !fb.db) return;
+      const op=(document.getElementById('activeOperation')?.value || currentOperation || 'Cerro Corona').trim();
+      if(!op || op==='Otra') return;
+      window.svPointsVisible = true;
+      try{ svPointsVisible = true; }catch(e){}
+      const snap=await fb.db.ref('shearVanePlannedPoints/'+safeKey(op)).once('value');
+      const payload=snap.val();
+      if(payload && payload.points && typeof renderSvPlannedPoints==='function'){
+        renderSvPlannedPoints(payload);
+      }
+    }catch(e){ console.warn('No se pudieron cargar puntos SVT por defecto',e); }
+  }
+
+  function operatorEntryDefaults(){
+    forceOperationalDefaults();
+    showSvtPointsForCurrentOperation();
+    ensureRecenterButton();
+    window.mmGpsFollowUser=true;
+    const b=document.getElementById('btnRecenterGpsMap'); if(b) b.classList.add('following');
+  }
+
+  // Al entrar o cambiar de operación, mostrar siempre las líneas y puntos SVT de esa operación.
+  const enterBtn=document.getElementById('btnEnterApp');
+  if(enterBtn){ enterBtn.addEventListener('click',()=>setTimeout(operatorEntryDefaults,700)); }
+  ['loginOperation','activeOperation'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('change',()=>setTimeout(operatorEntryDefaults,400));
+  });
+
+  // Al iniciar jornada, mantener follow GPS activo y asegurarse de que la operación esté visible.
+  const startBtn=document.getElementById('btnStart');
+  if(startBtn){ startBtn.addEventListener('click',()=>setTimeout(operatorEntryDefaults,700)); }
+
+  // Si Firebase carga layouts/SVT después de abrir la app, reintentar.
+  setTimeout(operatorEntryDefaults,1000);
+  setTimeout(operatorEntryDefaults,2500);
+  setTimeout(operatorEntryDefaults,5000);
+})();
 </script>
 
 <div id="chartExpandModal"><div id="chartExpandCard"><div id="chartExpandHeader"><span id="chartExpandTitle">Gráfica ampliada</span><button id="btnCloseChartExpand" class="btn-outline" style="width:auto;margin:0;">Cerrar</button></div><div id="chartExpandContent"></div></div></div>
