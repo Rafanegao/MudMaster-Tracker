@@ -6698,5 +6698,652 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
 })();
 </script>
 
+
+<script>
+/* PATCH 2026-07-08M: live full track + notifications + valid INICIO/FINAL pass logic */
+(function(){
+  window.__mudmaster_patch_version='2026-07-08M_live_track_notifications_start_end_passes';
+  function $(id){return document.getElementById(id)}
+  function fbo(){try{if(typeof fb!=='undefined'&&fb){window.fb=fb;return fb}}catch(e){}return window.fb||null}
+  function dbase(){var f=fbo();return f&&f.db?f.db:null}
+  function user(){var f=fbo();try{return f&&f.auth&&f.auth.currentUser}catch(e){return null}}
+  function admin(){var f=fbo();return !!(f&&(f.admin||f.supervisor||(f.auth&&f.auth.currentUser&&!f.auth.currentUser.isAnonymous)))}
+  function sk(v){try{return safeKey(v)}catch(e){return String(v||'').replace(/[.#$\[\]\/\s]+/g,'_')||'key'}}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function op(){return (($('activeOperation')&&$('activeOperation').value)||window.currentOperation||($('loginOperation')&&$('loginOperation').value)||'Cerro Corona').trim()}
+  function opCode(o){try{return (OPERATION_PROFILES&&OPERATION_PROFILES[o]&&OPERATION_PROFILES[o].code)||makeOperationCode(o)||'GEN'}catch(e){return String(o||'GEN').split(/\s+/).map(function(x){return x[0]||''}).join('').toUpperCase().slice(0,6)||'GEN'}}
+  function opOk(z,o){if(!z)return false;if(admin())return true;var c=opCode(o);return z.operation_name===o||z.operation===o||z.operation_code===c||z.operationCode===c||opCode(z.operation_name||z.operation||'')===c}
+  function dateKey(ts){var dd=new Date(ts||Date.now());if(!isFinite(dd))dd=new Date();return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0')}
+  function lineTotal(zoneKey,key){var total=0;try{Object.values((passCountsToday||{})[zoneKey]||{}).forEach(function(mm){total+=Number((mm||{})[key]||0)})}catch(e){}return total}
+  function visual(zoneKey,key){return Number(((window.mmLivePassPaintCounts||{})[zoneKey]||{})[key]||0)}
+  function addVisual(zoneKey,key){window.mmLivePassPaintCounts=window.mmLivePassPaintCounts||{};window.mmLivePassPaintCounts[zoneKey]=window.mmLivePassPaintCounts[zoneKey]||{};window.mmLivePassPaintCounts[zoneKey][key]=(window.mmLivePassPaintCounts[zoneKey][key]||0)+1}
+  function norm(v){var n=Math.hypot(v.x||0,v.y||0)||1;return{x:(v.x||0)/n,y:(v.y||0)/n}}
+  function angle(v,u){v=norm(v);u=norm(u);var c=Math.max(-1,Math.min(1,Math.abs(v.x*u.x+v.y*u.y)));return Math.acos(c)*180/Math.PI}
+  function distSeg(p,a,b){try{return distPointToSegment(p,a,b)}catch(e){var vx=b.x-a.x,vy=b.y-a.y,wx=p.x-a.x,wy=p.y-a.y,c1=vx*wx+vy*wy;if(c1<=0)return Math.hypot(p.x-a.x,p.y-a.y);var c2=vx*vx+vy*vy;if(c2<=c1)return Math.hypot(p.x-b.x,p.y-b.y);var t=c1/c2,q={x:a.x+t*vx,y:a.y+t*vy};return Math.hypot(p.x-q.x,p.y-q.y)}}
+  function pointIn(poly,p){var inside=false;for(var i=0,j=poly.length-1;i<poly.length;j=i++){var xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;var inter=((yi>p.y)!=(yj>p.y))&&(p.x<(xj-xi)*(p.y-yi)/(yj-yi+1e-12)+xi);if(inter)inside=!inside}return inside}
+  function midLine(l){try{return lineMidLL(l)}catch(e){return[(Number(l.a[0])+Number(l.b[0]))/2,(Number(l.a[1])+Number(l.b[1]))/2]}}
+  function ctr(poly){try{return latLngCentroid(poly)}catch(e){var a=0,b=0;(poly||[]).forEach(function(p){a+=Number(p[0]);b+=Number(p[1])});var n=(poly||[]).length||1;return{lat:a/n,lng:b/n}}}
+  function projLine(line,proj){return line&&line.length>=2?{a:proj.toXY(line[0]),b:proj.toXY(line[line.length-1])}:null}
+  function stripKey(a,b){return 'STRIP__'+sk(a)+'__'+sk(b)}
+  function strips(zoneKey,z){if(!z||!z.polygon||!z.lines)return[];var vals=Object.entries(z.lines).sort(function(a,b){return(Number(a[1].index)||0)-(Number(b[1].index)||0)});if(vals.length<2)return[];var proj;try{proj=makeProjector(z.polygon)}catch(e){return[]}var st=projLine(z.start_line,proj), en=projLine(z.end_line,proj), out=[];for(var i=0;i<vals.length-1;i++){var lk1=vals[i][0],l1=vals[i][1],lk2=vals[i+1][0],l2=vals[i+1][1];if(!l1||!l2||!l1.a||!l1.b||!l2.a||!l2.b)continue;var a1=proj.toXY(l1.a),b1=proj.toXY(l1.b),a2=proj.toXY(l2.a),b2=proj.toXY(l2.b),poly=[a1,b1,b2,a2],cA={x:(a1.x+a2.x)/2,y:(a1.y+a2.y)/2},cB={x:(b1.x+b2.x)/2,y:(b1.y+b2.y)/2},w=(Math.hypot(a1.x-a2.x,a1.y-a2.y)+Math.hypot(b1.x-b2.x,b1.y-b2.y))/2;out.push({zoneKey:zoneKey,z:z,idx:i,lk1:lk1,lk2:lk2,key:stripKey(lk1,lk2),name:(z.operation_code?z.operation_code+'-':'')+(z.name||zoneKey)+' · Pase '+(i+1),proj:proj,poly:poly,centerA:cA,centerB:cB,width:w,axis:norm({x:cB.x-cA.x,y:cB.y-cA.y}),start:st,end:en,tolerance:Math.max(Number(z.tolerance_m)||4,4)})}return out}
+  function inStrip(xy,s){if(pointIn(s.poly,xy))return true;return distSeg(xy,s.centerA,s.centerB)<=Math.max((s.width||6.25)/2+Math.min(s.tolerance||4,5),(s.width||6.25)*.75)}
+  function near(xy,line,tol){return !!line&&distSeg(xy,line.a,line.b)<=tol}
+  function valid(a,b,s){var mv={x:b.x-a.x,y:b.y-a.y},d=Math.hypot(mv.x,mv.y),len=Math.hypot(s.centerB.x-s.centerA.x,s.centerB.y-s.centerA.y);return d>=Math.max(12,Math.min(35,len*.15))&&angle(mv,s.axis)<=38}
+
+  window.mmLiveFleetLayers=window.mmLiveFleetLayers||{};
+  window.upsertFleetLayer=function(machine,points,operador,live){if(!points||!points.length||!window.map)return;var col=(typeof colorForMachine==='function')?colorForMachine(machine):'#7DCD00',latlngs=points.map(function(p){return[Number(p.lat),Number(p.lon)]}).filter(function(p){return Number.isFinite(p[0])&&Number.isFinite(p[1])});if(!latlngs.length)return;var r=window.mmLiveFleetLayers[machine];if(!r){var pl=L.polyline(latlngs,{color:col,weight:live?5:4,opacity:live?.95:.75}).addTo(map),mk=L.marker(latlngs[latlngs.length-1],{icon:L.divIcon({className:'',html:'<div style="background:'+col+';width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 5px rgba(0,0,0,.7)"></div>',iconSize:[14,14]})}).addTo(map);try{mk.bindTooltip('',{permanent:true,direction:'top',offset:[0,-10],className:'live-badge'})}catch(e){}r={polyline:pl,marker:mk,color:col};window.mmLiveFleetLayers[machine]=r;try{fleetLayers[machine]=r}catch(e){}}else{r.polyline.setLatLngs(latlngs);r.marker.setLatLng(latlngs[latlngs.length-1])}var last=points[points.length-1]||{};try{r.marker.setTooltipContent('<b>'+esc(machine)+'</b><br>'+esc(operador||'')+'<br>'+esc(last.speed||0)+' km/h<br>'+new Date(last.ts||Date.now()).toLocaleTimeString())}catch(e){}try{renderLegend()}catch(e){}}
+  try{upsertFleetLayer=window.upsertFleetLayer}catch(e){}
+  window.publishFleet=async function(maquina,operador,points,active){var db=dbase();if(!db)return;var key=sk(maquina),o=op(),c=opCode(o);if(active===false){try{await db.ref('fleet/'+key+'/active').set(false);await db.ref('fleet/'+key+'/endedAt').set(new Date().toISOString())}catch(e){}return}var clean=(points||[]).map(function(p){return{lat:Number(p.lat),lon:Number(p.lon),ts:p.ts||new Date().toISOString(),speed:Number(p.speed||0),maquina:maquina,operador:operador,operation:o,operationCode:c}}).filter(function(p){return Number.isFinite(p.lat)&&Number.isFinite(p.lon)});await db.ref('fleet/'+key).set({maquina:maquina,operador:operador,operation:o,operationCode:c,active:true,updatedAt:new Date().toISOString(),points:clean});var day=clean.length?dateKey(clean[0].ts):dateKey();await db.ref('liveTracks/'+day+'/'+key).set({maquina:maquina,operador:operador,operation:o,operationCode:c,updatedAt:new Date().toISOString(),points:clean})}
+  try{publishFleet=window.publishFleet}catch(e){}
+  window.subscribeFleet=function(){var db=dbase();if(!db||window._mmFleetSubM)return;window._mmFleetSubM=true;db.ref('fleet').on('value',function(snap){var data=snap.val()||{},live=new Set(),active=op();Object.keys(data).forEach(function(k){var f=data[k]||{};if(!f.points||!f.points.length||f.active===false)return;if(!admin()&&f.operation&&f.operation!==active)return;var name=f.maquina||k;live.add(name);window.upsertFleetLayer(name,f.points,f.operador,true)});Object.keys(window.mmLiveFleetLayers||{}).forEach(function(name){if(!live.has(name)&&name!==window.currentMachine){try{map.removeLayer(window.mmLiveFleetLayers[name].polyline);map.removeLayer(window.mmLiveFleetLayers[name].marker)}catch(e){}delete window.mmLiveFleetLayers[name]}})})}
+  try{subscribeFleet=window.subscribeFleet;if(dbase())window.subscribeFleet()}catch(e){}
+
+  window.mmLivePassState=window.mmLivePassState||{};
+  async function regPass(s,pt,maq,oper,kmh){var db=dbase(),ts=pt.ts||new Date().toISOString(),dk=dateKey(ts),idx=sk(dk+'_'+maq+'_'+s.zoneKey+'_'+s.key+'_'+Math.floor((new Date(ts).getTime()||Date.now())/60000));addVisual(s.zoneKey,s.key);if(db){var rf=db.ref('passEventIndex/'+dk+'/'+idx),ex=await rf.once('value');if(ex.exists())return false;await rf.set(true);await db.ref('passCounts/'+dk+'/'+s.zoneKey+'/'+sk(maq)+'/'+s.key).transaction(function(v){return(Number(v)||0)+1});var ev=db.ref('passEvents/'+dk).push().key;await db.ref('passEvents/'+dk+'/'+ev).set({ts:ts,date:dk,kind:'operational_pass',source:'live_gps_start_end',operationName:s.z.operation_name||'',operationCode:s.z.operation_code||'',zoneKey:s.zoneKey,zoneName:s.z.name||s.zoneKey,lineKey:s.key,lineName:s.name,maquina:maq,operador:oper,speed_kmh:Number(kmh||0),lat:pt.lat,lon:pt.lon,passLogic:'INICIO_FINAL_same_strip'})}try{renderOperationLayouts();renderOperationTree();renderPassSummary()}catch(e){}return true}
+  window.processControlLineCrossings=async function(prevLL,currLL,maq,oper,kmh){if(!currLL||!operationLayouts)return;var pt={lat:Number(currLL[0]),lon:Number(currLL[1]),ts:new Date().toISOString()},o=op();if(!Number.isFinite(pt.lat)||!Number.isFinite(pt.lon))return;for(const pair of Object.entries(operationLayouts||{})){var zoneKey=pair[0],z=pair[1];if(!opOk(z,o)||!z.start_line||!z.end_line)continue;for(const s of strips(zoneKey,z)){if(!s.start||!s.end)continue;var xy=s.proj.toXY([pt.lat,pt.lon]),inside=inStrip(xy,s),key=sk(maq+'_'+zoneKey+'_'+s.key),state=window.mmLivePassState[key]||null,tol=Math.max(s.tolerance,Math.min(12,(s.width||6.25)*1.35));if(!inside){if(state){state.gap=(state.gap||0)+1;if(state.gap>5)delete window.mmLivePassState[key];else window.mmLivePassState[key]=state}continue}var ns=near(xy,s.start,tol),ne=near(xy,s.end,tol);if(!state){if(ns)window.mmLivePassState[key]={from:'start',fromXY:xy,count:1,gap:0};else if(ne)window.mmLivePassState[key]={from:'end',fromXY:xy,count:1,gap:0};continue}state.count=(state.count||0)+1;state.gap=0;window.mmLivePassState[key]=state;var reached=(state.from==='start'&&ne)||(state.from==='end'&&ns);if(reached&&state.count>=3&&valid(state.fromXY,xy,s)){delete window.mmLivePassState[key];await regPass(s,pt,maq,oper,kmh)}}}}
+  try{processControlLineCrossings=window.processControlLineCrossings}catch(e){}
+
+  window.getStripPassCount=function(zoneKey,key){return lineTotal(zoneKey,key)+visual(zoneKey,key)}
+  window.renderOperationLayouts=function(){try{Object.values(operationLayoutLayers||{}).forEach(function(g){try{map.removeLayer(g)}catch(e){}});operationLayoutLayers={}}catch(e){}var opToggle=$('operatorShowLayout'),show=$('showControlLines'),allow=admin()||(opToggle&&opToggle.checked);if(!allow)return;if(admin()&&show&&!show.checked)return;var o=op();Object.entries(operationLayouts||{}).forEach(function(pair){var zoneKey=pair[0],z=pair[1];if(!opOk(z,o))return;if(typeof zoneVisible==='function'&&!zoneVisible(zoneKey))return;var group=L.layerGroup();if(z.polygon)L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);strips(zoneKey,z).forEach(function(s){var c=window.getStripPassCount(zoneKey,s.key),color=c>0?lineColorByCount(c,getZoneBaseColor(z)):'#ffffff',ll=s.poly.map(function(xy){return s.proj.toLL(xy)});L.polygon(ll,{className:'operation-line-strip',color:c>0?color:'#666',weight:c>0?1:0,fillColor:color,fillOpacity:c>0?.42:.035,interactive:false}).bindTooltip(esc(s.name)+' · pases: '+c,{sticky:true}).addTo(group)});Object.entries(z.lines||{}).forEach(function(p,idx){var l=p[1];L.polyline([l.a,l.b],{color:getZoneBaseColor(z),weight:1,opacity:.78,interactive:false}).addTo(group);if(idx===0||(idx+1)%5===0){try{L.marker(midLine(l),{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label">'+(idx+1)+'</span>',iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group)}catch(e){}}});try{var cc=z.polygon?ctr(z.polygon):null;if(cc)L.marker([cc.lat,cc.lng],{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label" style="font-size:12px">'+esc((typeof layoutDisplayName==='function'?layoutDisplayName(z,zoneKey):(z.name||zoneKey)))+'</span>',iconSize:[120,20],iconAnchor:[60,10]})}).addTo(group)}catch(e){}if(admin()&&z.show_start_line!==false&&z.start_line)L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('INICIO · pase',{sticky:true}).addTo(group);if(admin()&&z.show_end_line!==false&&z.end_line)L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('FINAL · pase',{sticky:true}).addTo(group);group.addTo(map);operationLayoutLayers[zoneKey]=group})}
+  try{renderOperationLayouts=window.renderOperationLayouts;setTimeout(renderOperationLayouts,500)}catch(e){}
+
+  window.renderNotifications=function(){var list=$('notificationList'),cnt=$('notificationCount'),o=op(),rows=Object.entries(window.notificationsCache||{}).map(function(p){var n=p[1]||{};n.id=p[0];return n}).filter(function(n){return !n.operation||n.operation==='ALL'||n.operation===o||admin()}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});if(list)list.innerHTML=rows.map(function(n){var del=admin()?'<button onclick="mmDeleteNotification(\''+esc(n.id)+'\')">Borrar</button>':'';return'<div class="notice-item"><b>'+esc(n.operation||'ALL')+'</b> · '+esc(n.createdAt||'')+'<br>'+esc(n.text||'')+'<br><span class="small">'+esc(n.author||'')+'</span><div class="notice-actions"><button onclick="markNotificationRead&&markNotificationRead(\''+esc(n.id)+'\')">Leído</button><button onclick="reactNotificationThumb&&reactNotificationThumb(\''+esc(n.id)+'\')">👍</button>'+del+'</div></div>'}).join('')||'Sin mensajes.';if(cnt){cnt.textContent=rows.length;cnt.style.display=rows.length?'inline-block':'none'}}
+  window.mmDeleteNotification=async function(id){var db=dbase();if(!db||!admin()){alert('Solo admin/supervisor puede borrar mensajes.');return}if(confirm('¿Borrar este mensaje para todos?'))await db.ref('notifications/'+id).remove()}
+  var send=$('btnSendNotice');if(send)send.onclick=async function(){var db=dbase();if(!db){alert('Firebase no está activo todavía. Espere unos segundos y reintente.');return}if(!admin()&&!(user()&&!user().isAnonymous)){alert('Debe estar como admin/supervisor para enviar notificaciones.');return}var text=($('noticeText')&&$('noticeText').value||'').trim();if(!text){alert('Ingrese mensaje.');return}var operation=($('noticeOperation')&&$('noticeOperation').value)||'ALL';await db.ref('notifications').push({operation:operation,text:text,createdAt:(typeof isoLocal==='function'?isoLocal(new Date()):new Date().toISOString()),author:(user()&&(user().email||user().uid))||'admin'});if($('noticeText'))$('noticeText').value='';if($('noticeAdminMsg'))$('noticeAdminMsg').textContent='Mensaje enviado a '+operation+'.'}
+  var nb=$('notificationBtn');if(nb)nb.onclick=function(){$('notificationsModal')&&$('notificationsModal').classList.add('open');try{window.renderNotifications()}catch(e){}}
+  try{if(dbase()&&!window._mmNoticeSubM){window._mmNoticeSubM=true;dbase().ref('notifications').limitToLast(50).on('value',function(snap){window.notificationsCache=snap.val()||{};window.renderNotifications()})}}catch(e){}
+  window.mmCodeAudit=function(){return{patchVersion:window.__mudmaster_patch_version, inlineScripts:document.querySelectorAll('script:not([src])').length, notes:'Base funcional restaurada; funciones críticas sobrescritas al final para evitar romper login/layout.'}}
+  console.log('MudMaster patch activo:',window.__mudmaster_patch_version,window.mmCodeAudit())
+})();
+/* PATCH 2026-07-08N: SVT editable desde Capas + lógica estricta de PASES INICIO/FINAL */
+(function(){
+  window.__mudmaster_patch_version = '2026-07-08N_svt_editable_capas_strict_passes';
+  function $(id){ return document.getElementById(id); }
+  function fbo(){ try{ if(typeof fb!=='undefined' && fb){ window.fb=fb; return fb; } }catch(e){} return window.fb||null; }
+  function db(){ var f=fbo(); return f&&f.db?f.db:null; }
+  function authUser(){ var f=fbo(); try{return f&&f.auth&&f.auth.currentUser;}catch(e){return null;} }
+  function isAdminLike(){ var f=fbo(); var u=authUser(); return !!(f&&(f.admin||f.supervisor||(u&&!u.isAnonymous))); }
+  function key(v){ try{return safeKey(v);}catch(e){return String(v||'').trim().replace(/[.#$\[\]\/\s]+/g,'_')||'key';} }
+  function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function opCodeLocal(op){ try{return (OPERATION_PROFILES&&OPERATION_PROFILES[op]&&OPERATION_PROFILES[op].code)||makeOperationCode(op)||'GEN';}catch(e){return String(op||'GEN').split(/\s+/).map(function(x){return x[0]||''}).join('').toUpperCase().slice(0,6)||'GEN';} }
+  function activeOp(){ return (($('activeOperation')&&$('activeOperation').value)||window.currentOperation||($('loginOperation')&&$('loginOperation').value)||'Cerro Corona').trim(); }
+  function layerOp(){ return (($('layerManagerOperation')&&$('layerManagerOperation').value)||activeOp()).trim(); }
+  function setMsg(id,msg){ var el=$(id); if(el) el.innerHTML=msg; }
+
+  // 1) Un solo ingreso de puntos SVT: desde Capas / Puntos SVT. Se oculta el importador duplicado del módulo SV.
+  function hideDuplicatedSvtImporter(){
+    var inp=$('svPointsFile'), btn=$('btnImportSvPoints');
+    if(inp){
+      var lab=inp.previousElementSibling;
+      if(lab && lab.tagName && lab.tagName.toLowerCase()==='label') lab.style.display='none';
+      inp.style.display='none';
+    }
+    if(btn) btn.style.display='none';
+    var shearCard=document.querySelector('[data-admin-section="shear"]');
+    if(shearCard && !document.getElementById('svtLayerOnlyNote')){
+      var note=document.createElement('div'); note.id='svtLayerOnlyNote'; note.className='qgis-note';
+      note.innerHTML='Los puntos SVT planificados ahora se cargan desde <b>Capas → Tipo carpeta: Puntos SVT</b>. Así evitamos duplicar KML/SVT en dos ventanas.';
+      var firstBtn=$('btnShowSvPoints')||shearCard.querySelector('button');
+      shearCard.insertBefore(note, firstBtn || shearCard.firstChild);
+    }
+  }
+
+  // 2) Herramientas de edición/formato SVT dentro de Capas.
+  function sourcePrefix(source){
+    var s=String(source||'SVT').split(/[\\/]/).pop().replace(/\.[^.]+$/,'').trim();
+    if(!s) return 'SVT';
+    s=s.replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'');
+    if(!s) return 'SVT';
+    return s.length>12?s.slice(0,12):s;
+  }
+  function getSvtStyle(payload){
+    var st=(payload&&payload.style)||{};
+    return {
+      labelMode: st.labelMode || 'sourceNumber',
+      fileSigla: st.fileSigla || sourcePrefix(payload&&payload.source),
+      markerSize: Number(st.markerSize||18),
+      labelSize: Number(st.labelSize||10),
+      markerColor: st.markerColor || '#7DCD00',
+      textColor: st.textColor || '#0f1a12'
+    };
+  }
+  function svtLabelForPoint(p,payload){
+    var st=getSvtStyle(payload), n=p.number||p.name||'';
+    if(st.labelMode==='number') return String(p.number||n||'');
+    if(st.labelMode==='name') return String(p.label||p.name||p.number||'');
+    if(st.labelMode==='source') return String(st.fileSigla||sourcePrefix(payload&&payload.source));
+    return String((st.fileSigla||sourcePrefix(payload&&payload.source))+'-'+(p.number||n));
+  }
+  function ensureSvtLayerControls(){
+    var card=document.querySelector('[data-admin-section="layers"]'); if(!card || $('mmSvtEditTools')) return;
+    var wrap=document.createElement('div'); wrap.id='mmSvtEditTools'; wrap.className='qgis-note';
+    wrap.innerHTML='\
+      <b>Edición de puntos SVT</b><br>\
+      <div class="dashboard-filter" style="margin-top:6px;">\
+        <div><label>Etiqueta punto</label><select id="svtLabelMode"><option value="sourceNumber">Sigla archivo + número</option><option value="number">Solo número</option><option value="name">Nombre del punto</option><option value="source">Solo sigla archivo</option></select></div>\
+        <div><label>Sigla archivo visible</label><input id="svtFileSigla" placeholder="Ej: SVT_Z1"></div>\
+        <div><label>Tamaño punto</label><input id="svtMarkerSizeEdit" type="number" min="8" max="40" step="1" value="18"></div>\
+        <div><label>Tamaño texto</label><input id="svtLabelSizeEdit" type="number" min="7" max="24" step="1" value="10"></div>\
+        <div><label>Color punto</label><input id="svtMarkerColorEdit" type="color" value="#7DCD00"></div>\
+        <div><label>Color texto</label><input id="svtTextColorEdit" type="color" value="#0f1a12"></div>\
+      </div>\
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;"><input type="checkbox" id="svtEditModeToggle"> Editar posición/nombre de puntos visibles</label>\
+      <div class="layout-actions-grid"><button id="btnApplySvtPointStyle" class="btn-outline" type="button">Aplicar formato SVT</button><button id="btnSaveSvtPointStyle" class="btn-outline" type="button">Guardar formato en nube</button></div>\
+      <div id="svtEditMsg" class="small" style="margin-top:5px;">Para mover un punto: activar edición y arrastrar el marcador. Para editar nombre/etiqueta: tocar el punto.</div>';
+    var tree=$('layerLibraryTree');
+    card.insertBefore(wrap, tree || card.lastChild);
+    $('svtEditModeToggle').onchange=function(){ window.mmSvtEditMode=!!this.checked; var payload=window.mmCurrentSvtPayload; if(payload){ try{ window.renderSvPlannedPoints(payload); }catch(e){} } };
+    $('btnApplySvtPointStyle').onclick=function(){ applySvtStyle(false); };
+    $('btnSaveSvtPointStyle').onclick=function(){ applySvtStyle(true); };
+  }
+  async function getPayloadForCurrentSvt(){
+    var payload=window.mmCurrentSvtPayload;
+    var op=(payload&&payload.operation)||layerOp();
+    if(op==='ALL') op=activeOp();
+    if((!payload || !payload.points) && db()){
+      var snap=await db().ref('shearVanePlannedPoints/'+key(op)).once('value'); payload=snap.val();
+    }
+    return payload;
+  }
+  async function applySvtStyle(save){
+    var payload=await getPayloadForCurrentSvt(); if(!payload||!payload.points){ setMsg('svtEditMsg','No hay puntos SVT visibles para formatear.'); return; }
+    payload.style={
+      labelMode: ($('svtLabelMode')&&$('svtLabelMode').value)||'sourceNumber',
+      fileSigla: (($('svtFileSigla')&&$('svtFileSigla').value)||sourcePrefix(payload.source)).trim(),
+      markerSize: Math.max(8,Number(($('svtMarkerSizeEdit')&&$('svtMarkerSizeEdit').value)||18)),
+      labelSize: Math.max(7,Number(($('svtLabelSizeEdit')&&$('svtLabelSizeEdit').value)||10)),
+      markerColor: ($('svtMarkerColorEdit')&&$('svtMarkerColorEdit').value)||'#7DCD00',
+      textColor: ($('svtTextColorEdit')&&$('svtTextColorEdit').value)||'#0f1a12'
+    };
+    window.mmCurrentSvtPayload=payload;
+    try{ window.renderSvPlannedPoints(payload); }catch(e){}
+    if(save && db()){
+      var op=payload.operation||activeOp(), code=payload.operationCode||opCodeLocal(op);
+      await db().ref('shearVanePlannedPoints/'+key(op)+'/style').set(payload.style);
+      await db().ref('operations/'+code+'/svt/plannedPoints/style').set(payload.style);
+      setMsg('svtEditMsg','Formato SVT guardado para '+esc(op)+'.');
+    }else setMsg('svtEditMsg','Formato aplicado visualmente.');
+  }
+  function loadSvtStyleToControls(payload){
+    ensureSvtLayerControls(); var st=getSvtStyle(payload);
+    if($('svtLabelMode')) $('svtLabelMode').value=st.labelMode;
+    if($('svtFileSigla')) $('svtFileSigla').value=st.fileSigla;
+    if($('svtMarkerSizeEdit')) $('svtMarkerSizeEdit').value=st.markerSize;
+    if($('svtLabelSizeEdit')) $('svtLabelSizeEdit').value=st.labelSize;
+    if($('svtMarkerColorEdit')) $('svtMarkerColorEdit').value=st.markerColor;
+    if($('svtTextColorEdit')) $('svtTextColorEdit').value=st.textColor;
+  }
+
+  window.renderSvPlannedPoints = function(payload){
+    try{ if(typeof svPointLayer!=='undefined' && svPointLayer){ map.removeLayer(svPointLayer); svPointLayer=null; } }catch(e){}
+    if(!payload || !payload.points){ return; }
+    window.mmCurrentSvtPayload=payload; window.svPointsVisible=true; try{ svPointsVisible=true; }catch(e){}
+    loadSvtStyleToControls(payload);
+    var st=getSvtStyle(payload), size=Math.max(8,Number(st.markerSize)||18), fs=Math.max(7,Number(st.labelSize)||10), edit=!!(window.mmSvtEditMode && isAdminLike());
+    var layer=L.layerGroup();
+    Object.entries(payload.points||{}).forEach(function(entry){
+      var id=entry[0], p=entry[1]||{}; var lat=Number(p.lat), lon=Number(p.lon); if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
+      var label=svtLabelForPoint(p,payload);
+      var html='<span class="sv-point-label" style="width:'+size+'px;height:'+size+'px;background:'+st.markerColor+';color:'+st.textColor+';font-size:'+fs+'px;line-height:'+size+'px;">'+esc(label)+'</span>';
+      var mk=L.marker([lat,lon],{draggable:edit,icon:L.divIcon({className:'',html:html,iconSize:[size,size],iconAnchor:[size/2,size/2]})});
+      mk.bindTooltip('SVT '+esc(label)+'<br>'+esc(p.name||'')+'<br>Archivo: '+esc(payload.source||''),{sticky:true});
+      mk.on('click',async function(){
+        if(!edit) return;
+        var newName=prompt('Nombre/etiqueta del punto SVT:', p.name||label); if(newName===null) return;
+        p.name=String(newName).trim()||p.name||label; p.label=p.name; payload.points[id]=p;
+        if(db()){
+          var op=payload.operation||activeOp(), code=payload.operationCode||opCodeLocal(op);
+          await db().ref('shearVanePlannedPoints/'+key(op)+'/points/'+id).update({name:p.name,label:p.label});
+          await db().ref('operations/'+code+'/svt/plannedPoints/points/'+id).update({name:p.name,label:p.label});
+        }
+        setMsg('svtEditMsg','Punto SVT actualizado: '+esc(p.name)); window.renderSvPlannedPoints(payload);
+      });
+      mk.on('dragend',async function(){
+        if(!edit) return;
+        var ll=mk.getLatLng(); p.lat=ll.lat; p.lon=ll.lng; payload.points[id]=p;
+        if(db()){
+          var op=payload.operation||activeOp(), code=payload.operationCode||opCodeLocal(op);
+          await db().ref('shearVanePlannedPoints/'+key(op)+'/points/'+id).update({lat:ll.lat,lon:ll.lng});
+          await db().ref('operations/'+code+'/svt/plannedPoints/points/'+id).update({lat:ll.lat,lon:ll.lng});
+        }
+        setMsg('svtEditMsg','Nueva posición guardada para '+esc(svtLabelForPoint(p,payload))+'.');
+      });
+      mk.addTo(layer);
+    });
+    svPointLayer=layer; try{ layer.addTo(map); }catch(e){}
+  };
+
+  async function importSvtFromLayerManager(){
+    if(!isAdminLike() || !db()){ alert('Debe estar como admin/supervisor y tener Firebase activo para guardar puntos SVT.'); return; }
+    var op=layerOp(); if(!op || op==='ALL' || op==='Otra'){ alert('Seleccione una operación específica para los puntos SVT.'); return; }
+    var files=Array.from(($('layerManagerFile')&&$('layerManagerFile').files)||[]); if(!files.length){ alert('Seleccione archivo KML/KMZ/GeoJSON/SHP ZIP de puntos SVT.'); return; }
+    if(typeof readPointFile!=='function'){ alert('El lector de puntos SVT no está disponible en esta versión.'); return; }
+    var payload={operation:op,operationCode:opCodeLocal(op),source:files.map(function(f){return f.name;}).join(' + '),updatedAt:(typeof isoLocal==='function'?isoLocal(new Date()):new Date().toISOString()),points:{},style:{
+      labelMode: ($('svtLabelMode')&&$('svtLabelMode').value)||'sourceNumber',
+      fileSigla: (($('svtFileSigla')&&$('svtFileSigla').value)||sourcePrefix(files[0].name)).trim(),
+      markerSize: Number(($('svtMarkerSizeEdit')&&$('svtMarkerSizeEdit').value)||18),
+      labelSize: Number(($('svtLabelSizeEdit')&&$('svtLabelSizeEdit').value)||10),
+      markerColor: ($('svtMarkerColorEdit')&&$('svtMarkerColorEdit').value)||'#7DCD00',
+      textColor: ($('svtTextColorEdit')&&$('svtTextColorEdit').value)||'#0f1a12'
+    }};
+    var count=0;
+    try{
+      for(const file of files){
+        var prefix=sourcePrefix(file.name), pts=await readPointFile(file);
+        pts.forEach(function(p,i){ count++; var raw=p.name||('P'+(i+1)); var id=key(prefix+'_'+raw+'_'+count); payload.points[id]={...p,number:count,source:file.name,fileSigla:prefix,label:raw}; });
+      }
+      if(!count){ alert('No se detectaron puntos en el archivo.'); return; }
+      await db().ref('shearVanePlannedPoints/'+key(op)).set(payload);
+      await db().ref('operations/'+payload.operationCode+'/svt/plannedPoints').set(payload);
+      try{ svPlannedPointsLibraryData=svPlannedPointsLibraryData||{}; svPlannedPointsLibraryData[key(op)]=payload; window.svPlannedPointsLibraryData=svPlannedPointsLibraryData; }catch(e){ window.svPlannedPointsLibraryData=window.svPlannedPointsLibraryData||{}; window.svPlannedPointsLibraryData[key(op)]=payload; }
+      if($('layerManagerFile')) $('layerManagerFile').value=''; if($('layerManagerDescription')) $('layerManagerDescription').value='';
+      window.svPointsVisible=true; try{svPointsVisible=true;}catch(e){}; window.renderSvPlannedPoints(payload);
+      try{ renderLayerLibraryTree(sharedLayerData); }catch(e){}
+      setMsg('svtEditMsg',count+' punto(s) SVT guardados desde Capas para '+esc(op)+'.');
+      alert(count+' punto(s) SVT guardados para '+op+'.');
+    }catch(e){ alert('Error importando puntos SVT desde Capas: '+e.message); console.error(e); }
+  }
+  var previousUploadManaged=window.uploadManagedLayers;
+  window.uploadManagedLayers=async function(){
+    var cat=($('layerManagerCategory')&&$('layerManagerCategory').value)||'';
+    if(cat==='Puntos SVT') return importSvtFromLayerManager();
+    if(typeof previousUploadManaged==='function') return previousUploadManaged.apply(this,arguments);
+    alert('No se encontró la función de carga de capas.');
+  };
+
+  // 3) Lógica estricta de PASES: la franja solo se pinta cuando se completa INICIO→FINAL o FINAL→INICIO dentro de la misma franja.
+  function norm(v){ var n=Math.hypot(v.x||0,v.y||0)||1; return {x:(v.x||0)/n,y:(v.y||0)/n}; }
+  function angleDeg(v,u){ v=norm(v); u=norm(u); var c=Math.max(-1,Math.min(1,Math.abs(v.x*u.x+v.y*u.y))); return Math.acos(c)*180/Math.PI; }
+  function distSeg(p,a,b){ try{return distPointToSegment(p,a,b);}catch(e){var vx=b.x-a.x,vy=b.y-a.y,wx=p.x-a.x,wy=p.y-a.y,c1=vx*wx+vy*wy;if(c1<=0)return Math.hypot(p.x-a.x,p.y-a.y);var c2=vx*vx+vy*vy;if(c2<=c1)return Math.hypot(p.x-b.x,p.y-b.y);var t=c1/c2,q={x:a.x+t*vx,y:a.y+t*vy};return Math.hypot(p.x-q.x,p.y-q.y);}}
+  function pointInPoly(poly,p){ var inside=false; for(var i=0,j=poly.length-1;i<poly.length;j=i++){var xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y; var inter=((yi>p.y)!=(yj>p.y))&&(p.x<(xj-xi)*(p.y-yi)/(yj-yi+1e-12)+xi); if(inter) inside=!inside;} return inside; }
+  function projPolyline(line,proj){ return (line||[]).map(function(ll){return proj.toXY(ll);}).filter(Boolean); }
+  function distToPolyline(pt,arr){ if(!arr||arr.length<2) return Infinity; var d=Infinity; for(var i=0;i<arr.length-1;i++) d=Math.min(d,distSeg(pt,arr[i],arr[i+1])); return d; }
+  function nearPolyline(pt,arr,tol){ return distToPolyline(pt,arr)<=tol; }
+  function stripKey(a,b){ return 'STRIP__'+key(a)+'__'+key(b); }
+  function buildStrictStrips(zoneKey,z){
+    if(!z||!z.polygon||!z.lines||!z.start_line||!z.end_line) return [];
+    var vals=Object.entries(z.lines||{}).sort(function(a,b){ return (Number(a[1].index)||0)-(Number(b[1].index)||0); }); if(vals.length<2) return [];
+    var proj; try{ proj=makeProjector(z.polygon); }catch(e){ return []; }
+    var start=projPolyline(z.start_line,proj), end=projPolyline(z.end_line,proj); if(start.length<2||end.length<2) return [];
+    var out=[];
+    for(var i=0;i<vals.length-1;i++){
+      var lk1=vals[i][0],l1=vals[i][1],lk2=vals[i+1][0],l2=vals[i+1][1]; if(!l1||!l2||!l1.a||!l1.b||!l2.a||!l2.b) continue;
+      var a1=proj.toXY(l1.a), b1=proj.toXY(l1.b), a2=proj.toXY(l2.a), b2=proj.toXY(l2.b);
+      var poly=[a1,b1,b2,a2], cA={x:(a1.x+a2.x)/2,y:(a1.y+a2.y)/2}, cB={x:(b1.x+b2.x)/2,y:(b1.y+b2.y)/2};
+      var width=(Math.hypot(a1.x-a2.x,a1.y-a2.y)+Math.hypot(b1.x-b2.x,b1.y-b2.y))/2;
+      var axis=norm({x:cB.x-cA.x,y:cB.y-cA.y});
+      out.push({zoneKey:zoneKey,z:z,idx:i,lk1:lk1,lk2:lk2,key:stripKey(lk1,lk2),name:(z.operation_code?z.operation_code+'-':'')+(z.name||zoneKey)+' · Pase '+(i+1),proj:proj,poly:poly,centerA:cA,centerB:cB,width:width,axis:axis,start:start,end:end,tolerance:Math.max(4,Number(z.tolerance_m)||4)});
+    }
+    return out;
+  }
+  function insideStrictStrip(pt,s){ if(pointInPoly(s.poly,pt)) return true; return distSeg(pt,s.centerA,s.centerB)<=Math.max((s.width||6.25)/2+Math.min(s.tolerance,4),(s.width||6.25)*0.7); }
+  function sameStripValidMove(a,b,s){ var mv={x:b.x-a.x,y:b.y-a.y}, d=Math.hypot(mv.x,mv.y), len=Math.hypot(s.centerB.x-s.centerA.x,s.centerB.y-s.centerA.y); if(d<Math.max(15,Math.min(40,len*0.18))) return false; return angleDeg(mv,s.axis)<=30; }
+  function layoutMatchesOp(z,operation,code){ if(isAdminLike()) return true; return !z || z.operation_name===operation || z.operation===operation || z.operation_code===code || z.operationCode===code; }
+  function dateKey(ts){ var d=new Date(ts||Date.now()); if(!isFinite(d)) d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  window.mmPassVisualCounts=window.mmPassVisualCounts||{};
+  function addPassVisual(zoneKey,stripKey){ window.mmPassVisualCounts[zoneKey]=window.mmPassVisualCounts[zoneKey]||{}; window.mmPassVisualCounts[zoneKey][stripKey]=(window.mmPassVisualCounts[zoneKey][stripKey]||0)+1; }
+  function passVisual(zoneKey,stripKey){ return Number(((window.mmPassVisualCounts||{})[zoneKey]||{})[stripKey]||0)+Number(((window.mmLivePassPaintCounts||{})[zoneKey]||{})[stripKey]||0)+Number(((window.mmGpsStripPaintCounts||{})[zoneKey]||{})[stripKey]||0); }
+  function dbPassCount(zoneKey,stripKey){ var total=0; try{ Object.values((passCountsToday||{})[zoneKey]||{}).forEach(function(mm){ total+=Number((mm||{})[stripKey]||0); }); }catch(e){} return total; }
+  window.getStripPassCount=function(zoneKey,stripKey){ return dbPassCount(zoneKey,stripKey)+passVisual(zoneKey,stripKey); };
+  async function registerStrictPass(strip,point,machine,operator,source,trackId,writeDb){
+    addPassVisual(strip.zoneKey,strip.key);
+    var database=db(); if(!writeDb||!database) return true;
+    var ts=point.ts||new Date().toISOString(), dk=dateKey(ts), idx=key(dk+'_'+machine+'_'+strip.zoneKey+'_'+strip.key+'_'+source+'_'+Math.floor((new Date(ts).getTime()||Date.now())/60000));
+    var ex=await database.ref('passEventIndex/'+dk+'/'+idx).once('value'); if(ex.exists()) return false;
+    await database.ref('passEventIndex/'+dk+'/'+idx).set(true);
+    await database.ref('passCounts/'+dk+'/'+strip.zoneKey+'/'+key(machine)+'/'+strip.key).transaction(function(v){return (Number(v)||0)+1;});
+    var ev=database.ref('passEvents/'+dk).push().key;
+    await database.ref('passEvents/'+dk+'/'+ev).set({ts:ts,date:dk,kind:'operational_pass',source:source||'gps_strict',gpsTrackId:trackId||'',operationName:strip.z.operation_name||'',operationCode:strip.z.operation_code||'',zoneKey:strip.zoneKey,zoneName:strip.z.name||strip.zoneKey,lineKey:strip.key,lineName:strip.name,maquina:machine,operador:operator,speed_kmh:Number(point.speed||0),lat:point.lat,lon:point.lon,passLogic:'STRICT_START_TO_END_SAME_STRIP',note:'Cuenta solo un pase completo dentro de la misma franja: INICIO→FINAL o FINAL→INICIO. No contabiliza cruces o traslados diagonales.'});
+    return true;
+  }
+  function processPointAgainstStrip(pt,strip,stateKey,machine,operator,source,trackId,writeDb){
+    var xy=strip.proj.toXY([Number(pt.lat),Number(pt.lon)]); if(!Number.isFinite(xy.x)||!Number.isFinite(xy.y)) return Promise.resolve(false);
+    var inside=insideStrictStrip(xy,strip), tol=Math.max(strip.tolerance,Math.min(10,(strip.width||6.25)*1.15));
+    var state=window.mmStrictPassState[stateKey]||null;
+    if(!inside){ if(state){ state.gap=(state.gap||0)+1; if(state.gap>5) delete window.mmStrictPassState[stateKey]; else window.mmStrictPassState[stateKey]=state; } return Promise.resolve(false); }
+    var nearStart=nearPolyline(xy,strip.start,tol), nearEnd=nearPolyline(xy,strip.end,tol);
+    if(!state){ if(nearStart) window.mmStrictPassState[stateKey]={from:'start',startXY:xy,count:1,gap:0}; else if(nearEnd) window.mmStrictPassState[stateKey]={from:'end',startXY:xy,count:1,gap:0}; return Promise.resolve(false); }
+    state.count=(state.count||0)+1; state.gap=0; window.mmStrictPassState[stateKey]=state;
+    var reached=(state.from==='start'&&nearEnd)||(state.from==='end'&&nearStart);
+    if(reached && state.count>=3 && sameStripValidMove(state.startXY,xy,strip)){ delete window.mmStrictPassState[stateKey]; return registerStrictPass(strip,pt,machine,operator,source,trackId,writeDb); }
+    return Promise.resolve(false);
+  }
+  window.mmStrictPassState=window.mmStrictPassState||{};
+  window.processControlLineCrossings=async function(prevLL,currLL,machine,operator,kmh){
+    if(!currLL||!operationLayouts) return;
+    var operation=activeOp(), code=opCodeLocal(operation), pt={lat:Number(currLL[0]),lon:Number(currLL[1]),speed:Number(kmh||0),ts:new Date().toISOString()};
+    if(!Number.isFinite(pt.lat)||!Number.isFinite(pt.lon)) return;
+    for(const entry of Object.entries(operationLayouts||{})){
+      var zoneKey=entry[0],z=entry[1]; if(!layoutMatchesOp(z,operation,code)) continue;
+      for(const strip of buildStrictStrips(zoneKey,z)){
+        await processPointAgainstStrip(pt,strip,key(machine+'_'+zoneKey+'_'+strip.key),machine||'MM',operator||'', 'live_gps_strict_pass', '', true);
+      }
+    }
+  };
+  window.countTrackByValidPasses=async function(track,writeDb){
+    if(!track||!track.points||track.points.length<2) return {events:0};
+    var operation=track.operation||activeOp(), code=track.operationCode||opCodeLocal(operation), total=0;
+    for(const entry of Object.entries(operationLayouts||{})){
+      var zoneKey=entry[0],z=entry[1]; if(!(z.operation_name===operation||z.operation===operation||z.operation_code===code||z.operationCode===code)) continue;
+      for(const strip of buildStrictStrips(zoneKey,z)){
+        var localKey=key((track.id||track.name||'gps')+'_'+zoneKey+'_'+strip.key); window.mmStrictPassState[localKey]=null;
+        for(const p of track.points){
+          if(!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon))) continue;
+          var ok=await processPointAgainstStrip(p,strip,localKey,track.machine||track.maquina||'MM',track.operator||track.operador||'GPS CSV','gps_csv_strict_pass',track.id||'',!!writeDb);
+          if(ok) total++;
+        }
+        delete window.mmStrictPassState[localKey];
+      }
+    }
+    return {events:total};
+  };
+  window.updateTrackingMapFromGps=async function(writeDb){
+    window.mmPassVisualCounts={}; window.mmGpsStripPaintCounts={};
+    var visible=Object.values(window.mmGpsCache||{}).filter(function(t){
+      var vis=(typeof gpsVisible==='function')?gpsVisible(t.id):localStorage.getItem('gps_track_visible_'+t.id)!=='false';
+      var scope=(typeof inScopeOp==='function')?inScopeOp(t.operation,t.operationCode):true; return vis&&scope;
+    });
+    visible.forEach(function(t){ try{ if(typeof renderGpsTrack2==='function') renderGpsTrack2(t,false); else if(typeof renderGpsTrack==='function') renderGpsTrack(t,false); }catch(e){} });
+    var total=0; for(const t of visible){ var r=await window.countTrackByValidPasses(t,!!writeDb); total+=r.events; }
+    try{ renderOperationLayouts(); renderOperationTree(); renderLayerLibraryTree(sharedLayerData); if(typeof renderPassSummary==='function') renderPassSummary(); }catch(e){}
+    var res=$('gpsCsvResult'); if(res) res.innerHTML='Tracking actualizado: <b>'+visible.length+'</b> GPS visible(s) · <b>'+total+'</b> pase(s) válido(s) INICIO/FINAL. No se contaron cruces diagonales.'+(writeDb?' Guardado en histórico.':' Visual solamente.');
+    return total;
+  };
+  window.countVisibleGpsCsvAgainstLines2=async function(){
+    if(!confirm('Se registrarán PASES, no cruces. Solo cuenta si la MM avanza dentro de la misma franja desde INICIO a FINAL o de FINAL a INICIO. ¿Continuar?')) return;
+    var total=await window.updateTrackingMapFromGps(true); alert('Conteo finalizado: '+total+' pase(s) registrados.');
+  };
+
+  var oldRenderLayouts=window.renderOperationLayouts;
+  window.renderOperationLayouts=function(){
+    try{ Object.values(operationLayoutLayers||{}).forEach(function(g){try{map.removeLayer(g);}catch(e){}}); operationLayoutLayers={}; }catch(e){}
+    var show=$('showControlLines'), opToggle=$('operatorShowLayout'); var allow=isAdminLike()||(opToggle&&opToggle.checked); if(!allow) return; if(isAdminLike()&&show&&!show.checked) return;
+    var operation=activeOp(), code=opCodeLocal(operation);
+    Object.entries(operationLayouts||{}).forEach(function(entry){
+      var zoneKey=entry[0],z=entry[1]; if(!layoutMatchesOp(z,operation,code)) return; if(typeof zoneVisible==='function'&&!zoneVisible(zoneKey)) return;
+      var group=L.layerGroup();
+      if(z.polygon) L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);
+      buildStrictStrips(zoneKey,z).forEach(function(s){
+        var c=window.getStripPassCount(zoneKey,s.key), base=(typeof getZoneBaseColor==='function'?getZoneBaseColor(z):(z.line_color||'#ffffff')), color=c>0?(typeof lineColorByCount==='function'?lineColorByCount(c,base):base):'#ffffff';
+        var polyLL=s.poly.map(function(xy){ return s.proj.toLL(xy); });
+        L.polygon(polyLL,{className:'operation-line-strip',color:c>0?color:'#666',weight:c>0?1:0,fillColor:color,fillOpacity:c>0?0.42:0.035,interactive:false}).bindTooltip(esc(s.name)+' · pases: '+c,{sticky:true}).addTo(group);
+      });
+      Object.entries(z.lines||{}).sort(function(a,b){return (Number(a[1].index)||0)-(Number(b[1].index)||0);}).forEach(function(p,idx){var l=p[1],base=(typeof getZoneBaseColor==='function'?getZoneBaseColor(z):(z.line_color||'#ffffff')); if(!l||!l.a||!l.b)return; L.polyline([l.a,l.b],{color:base,weight:1,opacity:.78,interactive:false}).bindTooltip((l.name||p[0])+' · línea guía',{sticky:true}).addTo(group); if(idx===0||(idx+1)%5===0){try{var mid=(typeof lineMidLL==='function'?lineMidLL(l):[(Number(l.a[0])+Number(l.b[0]))/2,(Number(l.a[1])+Number(l.b[1]))/2]); L.marker(mid,{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label">'+(idx+1)+'</span>',iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group);}catch(e){}}});
+      try{var ctd=(typeof latLngCentroid==='function')?latLngCentroid(z.polygon):null; if(ctd)L.marker([ctd.lat,ctd.lng],{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label" style="font-size:12px;background:rgba(10,20,12,.92);">'+esc((typeof layoutDisplayName==='function'?layoutDisplayName(z,zoneKey):(z.name||zoneKey)))+'</span>',iconSize:[120,20],iconAnchor:[60,10]})}).addTo(group);}catch(e){}
+      if(isAdminLike()&&z.show_start_line!==false&&z.start_line)L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('INICIO · parámetro de pase',{sticky:true}).addTo(group);
+      if(isAdminLike()&&z.show_end_line!==false&&z.end_line)L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('FINAL · parámetro de pase',{sticky:true}).addTo(group);
+      group.addTo(map); operationLayoutLayers[zoneKey]=group;
+    });
+  };
+
+  function bindPatchN(){
+    hideDuplicatedSvtImporter(); ensureSvtLayerControls();
+    var up=$('btnUploadManagedLayer'); if(up) up.onclick=window.uploadManagedLayers;
+    var count=$('btnCountGpsCsv'); if(count) count.onclick=window.countVisibleGpsCsvAgainstLines2;
+    var upd=$('btnUpdateGpsTrackingMap'); if(upd) upd.onclick=function(){ window.updateTrackingMapFromGps(false); };
+    ['cruces','cruce'].forEach(function(){ });
+    document.querySelectorAll('.small,.step-card,#operationalDashboard,#gpsCsvResult,#passSummary').forEach(function(el){ if(el&&el.innerHTML) el.innerHTML=el.innerHTML.replace(/cruces/gi,'pases').replace(/cruce\(s\)/gi,'pase(s)').replace(/cruce/gi,'pase'); });
+    try{ window.renderOperationLayouts(); }catch(e){}
+    try{ renderLayerLibraryTree(sharedLayerData); }catch(e){}
+  }
+  setTimeout(bindPatchN,300); setTimeout(bindPatchN,1200); setTimeout(bindPatchN,3000);
+  console.log('MudMaster patch activo:', window.__mudmaster_patch_version);
+})();
+
+</script>
+
+<script>
+/* PATCH 2026-07-08O: jornada activa recuperable + huecos GPS */
+(function(){
+  window.__mudmaster_patch_version = '2026-07-08O_active_session_recovery';
+  var GAP_MS = 5 * 60 * 1000;
+  var SAVE_THROTTLE_MS = 2500;
+  var lastActiveSaveMs = 0;
+  window.mmActiveGapEvents = window.mmActiveGapEvents || [];
+
+  function $(id){ return document.getElementById(id); }
+  function fbo(){ try{ if(typeof fb !== 'undefined' && fb){ window.fb = fb; return fb; } }catch(e){} return window.fb || null; }
+  function dbase(){ var f=fbo(); return f && f.db ? f.db : null; }
+  function key(v){ try{ return safeKey(v); }catch(e){ return String(v||'').trim().replace(/[.#$\[\]\/\s]+/g,'_') || 'key'; } }
+  function nowIso(){ return new Date().toISOString(); }
+  function localIso(d){ try{ return isoLocal(d||new Date()); }catch(e){ return new Date(d||Date.now()).toISOString(); } }
+  function dayKey(ts){ var d=new Date(ts||Date.now()); if(!isFinite(d)) d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function activeOperationName(){ return (($('activeOperation')&&$('activeOperation').value) || (typeof currentOperation!=='undefined'&&currentOperation) || ($('loginOperation')&&$('loginOperation').value) || 'Cerro Corona').trim(); }
+  function operationCodeFor(op){ try{ return (OPERATION_PROFILES && OPERATION_PROFILES[op] && OPERATION_PROFILES[op].code) || makeOperationCode(op) || 'GEN'; }catch(e){ return String(op||'GEN').split(/\s+/).map(function(x){return x[0]||'';}).join('').toUpperCase().slice(0,6)||'GEN'; } }
+  function kmDistance(a,b){ try{ return map.distance([Number(a.lat),Number(a.lon)],[Number(b.lat),Number(b.lon)])/1000; }catch(e){ var R=6371,la1=Number(a.lat)*Math.PI/180,la2=Number(b.lat)*Math.PI/180,dl=(Number(b.lat)-Number(a.lat))*Math.PI/180,do2=(Number(b.lon)-Number(a.lon))*Math.PI/180; var h=Math.sin(dl/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(do2/2)**2; return 2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h)); } }
+  function calcDistance(points){ var d=0; for(var i=1;i<(points||[]).length;i++){ var a=points[i-1],b=points[i]; var gap=(new Date(b.ts).getTime()||0)-(new Date(a.ts).getTime()||0); if(gap<=GAP_MS && gap>=0) d+=kmDistance(a,b); } return d; }
+  function latLngSegments(points){ var segs=[],cur=[]; (points||[]).forEach(function(p,i){ var ll=[Number(p.lat),Number(p.lon)]; if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1])) return; if(i>0){ var prev=points[i-1]; var gap=(new Date(p.ts).getTime()||0)-(new Date(prev.ts).getTime()||0); if(gap>GAP_MS && cur.length){ segs.push(cur); cur=[]; } } cur.push(ll); }); if(cur.length) segs.push(cur); return segs; }
+  function sessionLocalKey(machine){ return 'mudmaster_active_session_'+key(machine||'MM'); }
+  function buildSessionPayload(extra){
+    var op=activeOperationName(), code=operationCodeFor(op), machine=(typeof currentMachine!=='undefined'&&currentMachine) || (($('maquina')&&$('maquina').value)||'').trim(), operator=(($('operador')&&$('operador').value)||'').trim();
+    var pts=(typeof trackPoints!=='undefined' && Array.isArray(trackPoints)) ? trackPoints : [];
+    var st=(typeof startTime!=='undefined' && startTime) ? new Date(startTime) : new Date();
+    var id=(window.mmActiveSessionId || (key(machine)+'_'+(st.getTime()||Date.now())));
+    window.mmActiveSessionId = id;
+    var payload={
+      id:id, active:true, status:'active', sessionState:'active', operation:op, operationCode:code,
+      maquina:machine, machine:machine, operador:operator, operator:operator,
+      startISO:st.toISOString(), startLocal:localIso(st), updatedAt:nowIso(), lastSavedAt:nowIso(),
+      pointCount:pts.length, distancia:Number(((typeof totalDist!=='undefined'&&totalDist)||calcDistance(pts)||0).toFixed ? ((typeof totalDist!=='undefined'&&totalDist)||calcDistance(pts)).toFixed(3) : 0),
+      gaps:window.mmActiveGapEvents||[], pauseEvents:window.pauseEvents||[], points:pts
+    };
+    if(extra) Object.assign(payload,extra);
+    return payload;
+  }
+  function saveLocalActiveSession(extra){
+    try{ var s=buildSessionPayload(extra); if(s.maquina) localStorage.setItem(sessionLocalKey(s.maquina), JSON.stringify(s)); localStorage.setItem('mudmaster_last_active_machine', s.maquina||''); return s; }catch(e){ return null; }
+  }
+  async function saveRemoteActiveSession(extra, force){
+    var s=saveLocalActiveSession(extra); if(!s) return null;
+    var t=Date.now(); if(!force && t-lastActiveSaveMs<SAVE_THROTTLE_MS) return s; lastActiveSaveMs=t;
+    var db=dbase(); if(!db || !s.maquina) return s;
+    var mk=key(s.maquina), day=dayKey(s.startISO);
+    try{
+      await db.ref('activeSessions/'+mk).set(s);
+      await db.ref('operations/'+s.operationCode+'/activeSessions/'+mk).set(Object.assign({},s,{points:null}));
+      await db.ref('liveTracks/'+day+'/'+mk).set({id:s.id,maquina:s.maquina,operador:s.operador,operation:s.operation,operationCode:s.operationCode,active:true,updatedAt:s.updatedAt,startISO:s.startISO,pointCount:s.pointCount,gaps:s.gaps||[],points:s.points||[]});
+      await db.ref('operations/'+s.operationCode+'/dailyActivity/'+day+'/'+mk).update({maquina:s.maquina,operador:s.operador,operation:s.operation,operationCode:s.operationCode,active:true,lastUpdate:s.updatedAt,pointCount:s.pointCount});
+    }catch(e){ console.warn('No se pudo guardar activeSession:', e); }
+    return s;
+  }
+  async function removeRemoteActiveSession(session){
+    var db=dbase(); if(!db||!session||!session.maquina) return; var mk=key(session.maquina), code=session.operationCode||operationCodeFor(session.operation||activeOperationName());
+    try{ await db.ref('activeSessions/'+mk).remove(); await db.ref('operations/'+code+'/activeSessions/'+mk).remove(); }catch(e){ console.warn('No se pudo cerrar activeSession:',e); }
+  }
+  function updateStatus(txt, cls){ var st=$('status'); if(st){ st.textContent=txt; st.className=cls||'status-live'; } }
+  function ensureOwnTrackVisual(machine){
+    var col; try{ col=colorForMachine(machine||'MM'); }catch(e){ col='#7DCD00'; }
+    try{ if(polyline) map.removeLayer(polyline); }catch(e){}
+    try{ if(ownMarker) map.removeLayer(ownMarker); }catch(e){}
+    polyline=L.polyline(latLngSegments(trackPoints),{color:col,weight:5,opacity:1}).addTo(map);
+    var last=(trackPoints||[])[(trackPoints||[]).length-1];
+    var pos=last?[Number(last.lat),Number(last.lon)]:map.getCenter();
+    ownMarker=L.marker(pos,{icon:L.divIcon({className:'',html:'<div style="background:'+col+';width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.7)"></div>',iconSize:[16,16]})}).addTo(map);
+    try{ ownMarker.bindTooltip('',{permanent:true,direction:'top',offset:[0,-12],className:'live-badge'}); }catch(e){}
+    refreshOwnTrackVisual(false);
+  }
+  function refreshOwnTrackVisual(doPan){
+    try{ if(polyline) polyline.setLatLngs(latLngSegments(trackPoints)); }catch(e){}
+    var pts=trackPoints||[], last=pts[pts.length-1], machine=(typeof currentMachine!=='undefined'&&currentMachine)||(($('maquina')&&$('maquina').value)||'MM'), oper=(($('operador')&&$('operador').value)||'');
+    if(last && ownMarker){ var ll=[Number(last.lat),Number(last.lon)]; ownMarker.setLatLng(ll); var elapsed=(typeof startTime!=='undefined'&&startTime)?fmtTime((new Date()-new Date(startTime))/1000):''; try{ ownMarker.setTooltipContent('<b>'+machine+'</b><br>'+oper+'<br>'+Number(last.speed||0).toFixed(1)+' km/h · '+Number(totalDist||0).toFixed(1)+' km<br>'+elapsed); }catch(e){} if(doPan && window.mmGpsFollowUser!==false) try{ map.panTo(ll); }catch(e){} }
+  }
+  function setActiveUi(session, resumed){
+    try{ jornadaActiva=true; }catch(e){}
+    try{ window.trackingPaused=false; }catch(e){}
+    try{ currentMachine=session.maquina||session.machine||(($('maquina')&&$('maquina').value)||''); }catch(e){}
+    if($('activeOperation')) $('activeOperation').value=session.operation||activeOperationName();
+    try{ currentOperation=session.operation||activeOperationName(); localStorage.setItem('currentOperation',currentOperation); }catch(e){}
+    if($('operador')){ $('operador').value=session.operador||session.operator||$('operador').value; $('operador').disabled=true; }
+    if($('maquina')){ $('maquina').value=session.maquina||session.machine||$('maquina').value; $('maquina').disabled=true; }
+    if($('dOperador')) $('dOperador').textContent=session.operador||session.operator||'-';
+    if($('dMaquina')) $('dMaquina').textContent=session.maquina||session.machine||'-';
+    if($('dInicio')) $('dInicio').textContent=localIso(new Date(session.startISO||Date.now()));
+    if($('btnStart')){ $('btnStart').disabled=true; $('btnStart').textContent='🔒 Jornada en curso'; }
+    if($('btnEnd')) $('btnEnd').disabled=false;
+    var pb=$('btnPauseLunch'); if(pb){ pb.disabled=false; pb.textContent='⏸ Pausa / Almuerzo'; }
+    updateStatus(resumed?'Jornada retomada - esperando GPS':'Jornada en curso - GPS activo','status-live');
+    try{ if(window.requestMudmasterWakeLock) window.requestMudmasterWakeLock(); }catch(e){}
+  }
+  function loadLocalActiveSession(machine){ try{ var txt=localStorage.getItem(sessionLocalKey(machine)); return txt?JSON.parse(txt):null; }catch(e){ return null; } }
+  async function loadRemoteActiveSession(machine){ var db=dbase(); if(!db||!machine) return null; try{ var snap=await db.ref('activeSessions/'+key(machine)).once('value'); return snap.val()||null; }catch(e){ return null; } }
+  function hydrateSession(session){
+    var pts=(session&&Array.isArray(session.points))?session.points:[];
+    try{ trackPoints=pts.map(function(p){ return {lat:Number(p.lat),lon:Number(p.lon),ts:p.ts||nowIso(),speed:Number(p.speed||0),maquina:p.maquina||session.maquina,operador:p.operador||session.operador,operation:p.operation||session.operation,operationCode:p.operationCode||session.operationCode,sessionId:session.id}; }).filter(function(p){return Number.isFinite(p.lat)&&Number.isFinite(p.lon);}); }catch(e){}
+    try{ startTime=new Date(session.startISO||Date.now()); }catch(e){ startTime=new Date(); }
+    try{ totalDist=Number(session.distancia)||calcDistance(trackPoints)||0; }catch(e){ totalDist=calcDistance(trackPoints)||0; }
+    try{ lastLatLng=trackPoints.length?[trackPoints[trackPoints.length-1].lat,trackPoints[trackPoints.length-1].lon]:null; }catch(e){}
+    try{ prevTs=trackPoints.length?trackPoints[trackPoints.length-1].ts:null; }catch(e){}
+    window.mmActiveGapEvents=session.gaps||[];
+    window.pauseEvents=session.pauseEvents||[];
+    window.mmActiveSessionId=session.id||window.mmActiveSessionId;
+    if($('dDist')) $('dDist').textContent=Number(totalDist||0).toFixed(2)+' km';
+    if($('dPuntos')) $('dPuntos').textContent=trackPoints.length;
+    ensureOwnTrackVisual(session.maquina||session.machine);
+  }
+  function startGpsWatchRecoverable(){
+    if(!navigator.geolocation){ updateStatus('Jornada activa - GPS no disponible','status-warn'); if($('gpsWarning')) $('gpsWarning').style.display='block'; return; }
+    try{ if(watchId!==null) navigator.geolocation.clearWatch(watchId); }catch(e){}
+    watchId=navigator.geolocation.watchPosition(async function(pos){
+      if(window.trackingPaused){ return; }
+      var op=activeOperationName(), code=operationCodeFor(op), machine=(typeof currentMachine!=='undefined'&&currentMachine)||(($('maquina')&&$('maquina').value)||'MM'), oper=(($('operador')&&$('operador').value)||'');
+      var ll=[Number(pos.coords.latitude),Number(pos.coords.longitude)], now=nowIso(); if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1])) return;
+      var prevPoint=(trackPoints||[])[(trackPoints||[]).length-1]||null;
+      var kmh=pos.coords.speed?pos.coords.speed*3.6:(lastLatLng?estimateSpeed(lastLatLng,ll):0);
+      if(prevPoint){
+        var gap=(new Date(now).getTime()||0)-(new Date(prevPoint.ts).getTime()||0);
+        if(gap>GAP_MS){ window.mmActiveGapEvents.push({from:prevPoint.ts,to:now,minutes:Number((gap/60000).toFixed(1)),reason:'app_background_or_gps_gap'}); }
+        else { try{ totalDist+=map.distance([Number(prevPoint.lat),Number(prevPoint.lon)],ll)/1000; }catch(e){ totalDist+=kmDistance(prevPoint,{lat:ll[0],lon:ll[1],ts:now}); } }
+      }
+      lastLatLng=ll; prevTs=now;
+      var pt={lat:ll[0],lon:ll[1],ts:now,speed:Number((kmh||0).toFixed(1)),maquina:machine,operador:oper,operation:op,operationCode:code,sessionId:window.mmActiveSessionId||''};
+      trackPoints.push(pt);
+      refreshOwnTrackVisual(true);
+      if($('dSpeed')) $('dSpeed').textContent=pt.speed.toFixed(1)+' km/h';
+      if($('dDist')) $('dDist').textContent=Number(totalDist||0).toFixed(2)+' km';
+      if($('dPuntos')) $('dPuntos').textContent=trackPoints.length;
+      if($('gpsWarning')) $('gpsWarning').style.display='none';
+      updateStatus('Jornada en curso - GPS activo','status-live');
+      try{ upsertFleetLayer(machine,trackPoints,oper,true); }catch(e){}
+      try{ await publishFleet(machine,oper,trackPoints,true); }catch(e){}
+      await saveRemoteActiveSession({lastPoint:pt}, false);
+      try{ await processControlLineCrossings(prevPoint?[Number(prevPoint.lat),Number(prevPoint.lon)]:null,ll,machine,oper,kmh); }catch(e){ console.warn('No se pudo procesar pase:', e); }
+    }, function(err){
+      updateStatus('Jornada activa - GPS pausado / esperando señal','status-warn');
+      if($('gpsWarning')){ $('gpsWarning').style.display='block'; $('gpsWarning').textContent='GPS temporalmente sin datos. La jornada sigue activa y se retomará al volver la señal/app.'; }
+      saveLocalActiveSession({lastGpsError:err&&err.message?err.message:String(err||'')});
+    }, {enableHighAccuracy:true, maximumAge:1000, timeout:15000});
+  }
+  async function startNewRecoverableSession(){
+    if(jornadaActiva) return;
+    var oper=(($('operador')&&$('operador').value)||'').trim(), machine=(($('maquina')&&$('maquina').value)||'').trim();
+    if(!oper||!machine){ alert('Ingrese operador y MMn° antes de iniciar.'); return; }
+    try{ if(typeof ensureAnonymous==='function') await ensureAnonymous(); }catch(e){}
+    var old=await loadRemoteActiveSession(machine) || loadLocalActiveSession(machine);
+    if(old && old.active!==false && old.status!=='closed'){
+      var msg='Hay una jornada activa para '+machine+' iniciada a '+localIso(new Date(old.startISO||Date.now()))+'.\n\n¿Desea retomar esa operación?';
+      if(confirm(msg)){ await resumeRecoverableSession(old); return; }
+      if(!confirm('¿Iniciar una jornada nueva y marcar la anterior como reemplazada?')) return;
+      try{ old.status='replaced_by_new_session'; old.active=false; var db=dbase(); if(db) await db.ref('activeSessions/'+key(machine)).update({active:false,status:'replaced_by_new_session',replacedAt:nowIso()}); localStorage.removeItem(sessionLocalKey(machine)); }catch(e){}
+    }
+    try{ jornadaActiva=true; currentMachine=machine; trackPoints=[]; totalDist=0; lastLatLng=null; prevTs=null; startTime=new Date(); endTime=null; window.trackingPaused=false; window.pauseEvents=[]; window.mmActiveGapEvents=[]; window.mmActiveSessionId=key(machine)+'_'+startTime.getTime(); }catch(e){}
+    var s=buildSessionPayload({createdAt:nowIso(),status:'active'});
+    setActiveUi(s,false); ensureOwnTrackVisual(machine);
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval=setInterval(function(){ if($('dTiempo')&&startTime) $('dTiempo').textContent=fmtTime((new Date()-new Date(startTime))/1000); },1000);
+    await saveRemoteActiveSession({createdAt:nowIso()}, true);
+    startGpsWatchRecoverable();
+  }
+  async function resumeRecoverableSession(session){
+    if(!session) return false;
+    try{ if(typeof ensureAnonymous==='function') await ensureAnonymous(); }catch(e){}
+    hydrateSession(session); setActiveUi(session,true);
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval=setInterval(function(){ if($('dTiempo')&&startTime) $('dTiempo').textContent=fmtTime((new Date()-new Date(startTime))/1000); },1000);
+    try{ upsertFleetLayer(session.maquina||session.machine,trackPoints,session.operador||session.operator,true); }catch(e){}
+    await saveRemoteActiveSession({resumedAt:nowIso()}, true);
+    startGpsWatchRecoverable();
+    return true;
+  }
+  async function checkRecoverableSessionPrompt(){
+    try{ if(jornadaActiva) return; }catch(e){}
+    var machine=(($('maquina')&&$('maquina').value)||localStorage.getItem('mudmaster_last_active_machine')||'').trim();
+    if(!machine) return;
+    var session=await loadRemoteActiveSession(machine) || loadLocalActiveSession(machine);
+    if(!session || session.active===false || session.status==='closed') return;
+    var ageHr=(Date.now()-(new Date(session.updatedAt||session.startISO||Date.now()).getTime()||Date.now()))/36e5;
+    if(ageHr>36) return;
+    if(confirm('Hay una jornada activa guardada para '+machine+'.\nInicio: '+localIso(new Date(session.startISO||Date.now()))+'\nPuntos guardados: '+(session.pointCount||((session.points||[]).length))+'\n\n¿Retomar operación?')){
+      await resumeRecoverableSession(session);
+    }
+  }
+  async function finishRecoverableSession(){
+    if(watchId!==null){ try{ navigator.geolocation.clearWatch(watchId); }catch(e){} watchId=null; }
+    if(timerInterval) clearInterval(timerInterval);
+    var session=saveLocalActiveSession({status:'closing'});
+    try{ jornadaActiva=false; window.trackingPaused=false; endTime=new Date(); }catch(e){}
+    try{ if(window.releaseMudmasterWakeLock) await window.releaseMudmasterWakeLock(); }catch(e){}
+    var oper=(($('operador')&&$('operador').value)||session?.operador||''), machine=(($('maquina')&&$('maquina').value)||session?.maquina||'MM');
+    var op=activeOperationName(), code=operationCodeFor(op), st=(typeof startTime!=='undefined'&&startTime)?new Date(startTime):new Date(session?.startISO||Date.now()), en=new Date();
+    var startFile; try{ startFile=fileDate(st); }catch(e){ startFile=st.toISOString().replace(/[-:T.Z]/g,'').slice(0,14); }
+    var endFile; try{ endFile=fileDate(en); }catch(e){ endFile=en.toISOString().replace(/[-:T.Z]/g,'').slice(0,14); }
+    var kml=''; try{ kml=buildKML(trackPoints,oper,machine,st,en,totalDist); }catch(e){ kml=''; }
+    var filename='recorrido_'+key(machine)+'_'+startFile+'_'+endFile+'.kml';
+    var record={id:Date.now(),sessionId:window.mmActiveSessionId||'',filename:filename,fecha:localIso(en),startISO:st.toISOString(),endISO:en.toISOString(),startFile:startFile,endFile:endFile,operador:oper,maquina:machine,operation:op,operationCode:code,puntos:(trackPoints||[]).length,distancia:Number(totalDist||calcDistance(trackPoints)||0).toFixed(2),gaps:window.mmActiveGapEvents||[],pauseEvents:window.pauseEvents||[],points:trackPoints||[],kml:kml,status:'closed'};
+    try{ var arr=JSON.parse(localStorage.getItem('trackerDB')||'[]'); arr.push(record); localStorage.setItem('trackerDB',JSON.stringify(arr)); }catch(e){}
+    try{ await publishFleet(machine,oper,trackPoints,false); }catch(e){}
+    try{ await saveSession(record); }catch(e){ console.warn('No se pudo guardar session final:', e); }
+    try{ var db=dbase(); if(db){ await db.ref('sessions/'+key(machine)+'_'+startFile).set(record); await db.ref('operations/'+code+'/sessions/'+key(machine)+'_'+startFile).set(Object.assign({},record,{points:null,kml:null})); } }catch(e){}
+    await removeRemoteActiveSession(record);
+    try{ localStorage.removeItem(sessionLocalKey(machine)); }catch(e){}
+    try{ if(polyline){ map.removeLayer(polyline); polyline=null; } if(ownMarker){ map.removeLayer(ownMarker); ownMarker=null; } }catch(e){}
+    try{ currentMachine=null; }catch(e){}
+    updateStatus('Jornada finalizada','status-off');
+    if($('btnStart')){ $('btnStart').disabled=false; $('btnStart').textContent='▶ Iniciar Día'; }
+    if($('btnEnd')) $('btnEnd').disabled=true;
+    var pb=$('btnPauseLunch'); if(pb){ pb.disabled=true; pb.textContent='⏸ Pausa / Almuerzo'; }
+    if($('operador')) $('operador').disabled=false; if($('maquina')) $('maquina').disabled=false;
+    try{ renderHistory(); }catch(e){}
+    if(kml){ try{ downloadFile(filename,kml); }catch(e){} }
+  }
+
+  // Mostrar tracks vivos con huecos también en mapa admin/supervisor/operador.
+  window.upsertFleetLayer=function(machine,points,operador,live){
+    if(!points||!points.length||typeof map==='undefined') return;
+    var col; try{ col=colorForMachine(machine); }catch(e){ col='#7DCD00'; }
+    var segs=latLngSegments(points), flat=[]; segs.forEach(function(s){ flat=flat.concat(s); }); if(!flat.length) return;
+    window.mmLiveFleetLayers=window.mmLiveFleetLayers||{};
+    var r=window.mmLiveFleetLayers[machine] || (typeof fleetLayers!=='undefined' ? fleetLayers[machine] : null);
+    if(!r){
+      var pl=L.polyline(segs,{color:col,weight:live?5:4,opacity:live?.95:.75}).addTo(map);
+      var mk=L.marker(flat[flat.length-1],{icon:L.divIcon({className:'',html:'<div style="background:'+col+';width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 5px rgba(0,0,0,.7)"></div>',iconSize:[14,14]})}).addTo(map);
+      try{ mk.bindTooltip('',{permanent:true,direction:'top',offset:[0,-10],className:'live-badge'}); }catch(e){}
+      r={polyline:pl,marker:mk,color:col}; window.mmLiveFleetLayers[machine]=r; try{ fleetLayers[machine]=r; }catch(e){}
+    }else{ try{ r.polyline.setLatLngs(segs); r.marker.setLatLng(flat[flat.length-1]); }catch(e){} }
+    var last=(points||[])[(points||[]).length-1]||{}; try{ r.marker.setTooltipContent('<b>'+machine+'</b><br>'+(operador||'')+'<br>'+(last.speed||0)+' km/h<br>'+new Date(last.ts||Date.now()).toLocaleTimeString()); }catch(e){}
+    try{ renderLegend(); }catch(e){}
+  };
+  try{ upsertFleetLayer=window.upsertFleetLayer; }catch(e){}
+
+  var bStart=$('btnStart'), bEnd=$('btnEnd'), bEnter=$('btnEnterApp');
+  if(bStart) bStart.onclick=function(){ startNewRecoverableSession(); };
+  if(bEnd) bEnd.onclick=function(){ if(confirm('¿Finalizar jornada y cerrar la sesión activa?')) finishRecoverableSession(); };
+  if(bEnter && !window._mmRecoverEnterBound){ window._mmRecoverEnterBound=true; bEnter.addEventListener('click',function(){ setTimeout(checkRecoverableSessionPrompt,900); }); }
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible'){
+      if(jornadaActiva){ updateStatus('Jornada activa - retomando GPS','status-warn'); startGpsWatchRecoverable(); saveRemoteActiveSession({visibleAgainAt:nowIso()}, true); }
+      else setTimeout(checkRecoverableSessionPrompt,800);
+    }else{
+      if(jornadaActiva) saveLocalActiveSession({hiddenAt:nowIso()});
+    }
+  });
+  window.addEventListener('pagehide',function(){ if(jornadaActiva) saveLocalActiveSession({pageHiddenAt:nowIso()}); });
+  window.mmCheckActiveSession=checkRecoverableSessionPrompt;
+  window.mmResumeActiveSession=resumeRecoverableSession;
+  window.mmSaveActiveSession=function(){ return saveRemoteActiveSession({manualSaveAt:nowIso()}, true); };
+  setTimeout(function(){ try{ if(!jornadaActiva && $('loginOverlay') && $('loginOverlay').classList.contains('hidden')) checkRecoverableSessionPrompt(); }catch(e){} },2000);
+  console.log('MudMaster patch activo:', window.__mudmaster_patch_version, 'jornada recuperable habilitada');
+})();
+</script>
+
 </body>
 </html>
