@@ -6785,7 +6785,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
 (function(){
   window.__mudmaster_patch_version = '2026-07-08O_active_session_recovery';
   var GAP_MS = 5 * 60 * 1000;
-  var SAVE_THROTTLE_MS = 2500;
+  var SAVE_THROTTLE_MS = 12000;
   var lastActiveSaveMs = 0;
   window.mmActiveGapEvents = window.mmActiveGapEvents || [];
 
@@ -6974,7 +6974,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     var op=activeOperationName(), code=operationCodeFor(op), st=(typeof startTime!=='undefined'&&startTime)?new Date(startTime):new Date(session?.startISO||Date.now()), en=new Date();
     var startFile; try{ startFile=fileDate(st); }catch(e){ startFile=st.toISOString().replace(/[-:T.Z]/g,'').slice(0,14); }
     var endFile; try{ endFile=fileDate(en); }catch(e){ endFile=en.toISOString().replace(/[-:T.Z]/g,'').slice(0,14); }
-    var kml=''; try{ kml=buildKML(trackPoints,oper,machine,st,en,totalDist); }catch(e){ kml=''; }
+    var kml=''; try{ if(window.mmGenerateKmlOnEnd===true) kml=buildKML(trackPoints,oper,machine,st,en,totalDist); }catch(e){ kml=''; } /* 09N: KML opcional (por defecto NO se genera en el celular; los puntos ya estan en la nube) */
     var filename='recorrido_'+key(machine)+'_'+startFile+'_'+endFile+'.kml';
     var record={id:Date.now(),sessionId:window.mmActiveSessionId||'',filename:filename,fecha:localIso(en),startISO:st.toISOString(),endISO:en.toISOString(),startFile:startFile,endFile:endFile,operador:oper,maquina:machine,operation:op,operationCode:code,puntos:(trackPoints||[]).length,distancia:Number(totalDist||calcDistance(trackPoints)||0).toFixed(2),gaps:window.mmActiveGapEvents||[],pauseEvents:window.pauseEvents||[],points:trackPoints||[],kml:kml,status:'closed'};
     try{ var arr=JSON.parse(localStorage.getItem('trackerDB')||'[]'); arr.push(record); localStorage.setItem('trackerDB',JSON.stringify(arr)); }catch(e){ logErr('finishRecoverableSession', e); }
@@ -6987,6 +6987,8 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     try{ localStorage.removeItem(sessionLocalKey(machine)); }catch(e){ logErr('finishRecoverableSession', e); }
     try{ if(polyline){ map.removeLayer(polyline); polyline=null; } if(ownMarker){ map.removeLayer(ownMarker); ownMarker=null; } }catch(e){ logErr('finishRecoverableSession', e); }
     try{ currentMachine=null; }catch(e){ logErr('finishRecoverableSession', e); }
+    /* KML solo en la nube (Firebase). La descarga la hace el admin luego con mmDownloadGpsTrack(id). */
+    try{ var _db3=dbase(); if(_db3 && trackPoints && trackPoints.length){ var _tid=key(machine)+'_'+startFile; var _gp={id:_tid, machine:machine, name:'Jornada '+machine+' '+startFile, operation:op, operationCode:code, groupKey:dayKey(record.startISO), color:'#00e5ff', source:'jornada_operador', pointCount:trackPoints.length, createdAt:nowIso(), points:trackPoints}; await _db3.ref('gpsTracks/'+code+'/'+_tid).set(_gp); } }catch(e){ logErr('finishRecoverableSession:gpsLayer', e); }
     updateStatus('Jornada finalizada','status-off');
     if($('btnStart')){ $('btnStart').disabled=false; $('btnStart').textContent='▶ Iniciar Día'; }
     if($('btnEnd')) $('btnEnd').disabled=true;
@@ -7067,8 +7069,8 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   window.zoomGpsTrack2=function(id){ var l=window.mmGpsLayers[id]; if(l){ try{map.fitBounds(l.getBounds(),{padding:[20,20]}); if(typeof showMap==='function') showMap();}catch(e){ logErr('pointSegments', e); } } else if(window.mmGpsCache[id]) window.renderGpsTrack2(window.mmGpsCache[id],true); };
   window.editGpsTrackColor=function(id){ var t=window.mmGpsCache[id]; if(!t) return; var c=prompt('Nuevo color HEX para esta capa GPS:',t.color||'#00e5ff'); if(!c) return; t.color=c.trim(); if(t._path&&db()) db().ref(t._path+'/color').set(t.color).catch(function(){}); window.renderGpsTrack2(t,false); try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('pointSegments', e); } };
   window.deleteGpsTrackLayer=async function(id){ var t=window.mmGpsCache[id]; if(!t) return; if(!confirm('¿Borrar esta capa GPS importada?')) return; if(t._path&&db()) await db().ref(t._path).remove().catch(function(){}); if(t.operationCode&&t.groupKey&&db()) await db().ref('operations/'+t.operationCode+'/GPS/'+t.groupKey+'/'+id).remove().catch(function(){}); if(window.mmGpsLayers[id]){try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('pointSegments', e); }} delete window.mmGpsLayers[id]; delete window.mmGpsCache[id]; try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('pointSegments', e); } };
-  async function loadGpsTracksFromFirebase(){ var database=db(); if(!database) return; var snap=await database.ref('gpsTracks').once('value'); var root=snap.val()||{}; Object.entries(root).forEach(function(pair){ var opSafe=pair[0], tracks=pair[1]||{}; Object.entries(tracks).forEach(function(e){ var id=e[0], t=e[1]; if(!t||!Array.isArray(t.points)) return; t.id=t.id||id; t._path='gpsTracks/'+opSafe+'/'+id; window.mmGpsCache[t.id]=t; window.renderGpsTrack2(t,false); }); }); try{ renderLayerLibraryTree(sharedLayerData); }catch(e){ logErr('loadGpsTracksFromFirebase', e); } }
-  function subscribeGpsOnce(){ if(window.__mmGpsFinalSubscribed || !db()) return; window.__mmGpsFinalSubscribed=true; db().ref('gpsTracks').on('value',function(snap){ var root=snap.val()||{}; Object.values(window.mmGpsLayers||{}).forEach(function(l){try{map.removeLayer(l);}catch(e){ logErr('subscribeGpsOnce', e); }}); window.mmGpsLayers={}; window.mmGpsCache={}; Object.entries(root).forEach(function(pair){ var opSafe=pair[0], tracks=pair[1]||{}; Object.entries(tracks).forEach(function(e){ var id=e[0], t=e[1]; if(!t||!Array.isArray(t.points)) return; t.id=t.id||id; t._path='gpsTracks/'+opSafe+'/'+id; window.mmGpsCache[t.id]=t; window.renderGpsTrack2(t,false); }); }); try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('subscribeGpsOnce', e); } }); }
+  async function loadGpsTracksFromFirebase(){ if(!isAdminLike()) return; var database=db(); if(!database) return; var snap=await database.ref('gpsTracks').once('value'); var root=snap.val()||{}; Object.entries(root).forEach(function(pair){ var opSafe=pair[0], tracks=pair[1]||{}; Object.entries(tracks).forEach(function(e){ var id=e[0], t=e[1]; if(!t||!Array.isArray(t.points)) return; t.id=t.id||id; t._path='gpsTracks/'+opSafe+'/'+id; window.mmGpsCache[t.id]=t; window.renderGpsTrack2(t,false); }); }); try{ renderLayerLibraryTree(sharedLayerData); }catch(e){ logErr('loadGpsTracksFromFirebase', e); } }
+  function subscribeGpsOnce(){ if(!isAdminLike()) return; if(window.__mmGpsFinalSubscribed || !db()) return; window.__mmGpsFinalSubscribed=true; db().ref('gpsTracks').on('value',function(snap){ var root=snap.val()||{}; Object.values(window.mmGpsLayers||{}).forEach(function(l){try{map.removeLayer(l);}catch(e){ logErr('subscribeGpsOnce', e); }}); window.mmGpsLayers={}; window.mmGpsCache={}; Object.entries(root).forEach(function(pair){ var opSafe=pair[0], tracks=pair[1]||{}; Object.entries(tracks).forEach(function(e){ var id=e[0], t=e[1]; if(!t||!Array.isArray(t.points)) return; t.id=t.id||id; t._path='gpsTracks/'+opSafe+'/'+id; window.mmGpsCache[t.id]=t; window.renderGpsTrack2(t,false); }); }); try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('subscribeGpsOnce', e); } }); }
   async function removeDuplicateGps(database,operation,machine,groupKey,fileName){ var opSafe=sk(operation); var snap=database?await database.ref('gpsTracks/'+opSafe).once('value'):null; var old=snap?snap.val()||{}:{}; for(var id in old){ var t=old[id]; if(t && t.machine===machine && t.groupKey===groupKey && (t.name===fileName || t.source==='csv_operational')){ await database.ref('gpsTracks/'+opSafe+'/'+id).remove().catch(function(){}); await database.ref('operations/'+(t.operationCode||opCode(operation))+'/GPS/'+groupKey+'/'+id).remove().catch(function(){}); if(window.mmGpsLayers[id]){try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('removeDuplicateGps', e); }} delete window.mmGpsLayers[id]; delete window.mmGpsCache[id]; } } }
   window.importGpsCsvFilesFinal=async function(){ var input=$('gpsCsvInput'), files=Array.from((input&&input.files)||[]); if(!files.length){ alert('Seleccione uno o más CSV GPS.'); return; } var database=db(); var split=($('gpsCsvSplitMode')&&$('gpsCsvSplitMode').value)||'day', color=($('gpsCsvColor')&&$('gpsCsvColor').value)||'#00e5ff', logs=[]; for(const file of files){ var auto=machineFromFile(file.name), manual=machineClean(($('gpsCsvMachine')&&$('gpsCsvMachine').value)||''), machine=(files.length>1&&auto)?auto:(auto||manual); if(!machine){ machine = machineClean(String(file.name).replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9]+/g,'')) || 'GPS'; logs.push(file.name+': MM no detectada, se usa "'+machine+'". Puede corregir la MM en el campo y reimportar.'); } var selected=($('gpsCsvOperation')&&$('gpsCsvOperation').value)||''; var operation=(selected && selected!=='Otra / Visualización')?selected:inferOpFromMachine(machine); var code=opCode(operation); var pts=parseGpsCsvRobust(await file.text()); if(pts.length<2){ logs.push(file.name+': sin puntos GPS válidos. Revise columnas dt_tracker, lat, lng.'); continue; } var groups={}; pts.forEach(function(p){ var g=gpsGroup(p.ts,split); (groups[g]=groups[g]||[]).push(p); }); for(const g of Object.keys(groups)){ var arr=groups[g]; if(arr.length<2) continue; if(database) await removeDuplicateGps(database,operation,machine,g,file.name); var id=sk(machine+'_'+g+'_'+Date.now()+'_'+Math.random().toString(16).slice(2,8)); var payload={id:id,name:file.name,machine:machine,operation:operation,operationCode:code,splitMode:split,groupKey:g,color:color,startTs:arr[0].ts,endTs:arr[arr.length-1].ts,pointCount:arr.length,source:'csv_operational',createdAt:(typeof isoLocal==='function'?isoLocal(new Date()):new Date().toISOString()),points:arr}; window.mmGpsCache[id]=payload; setGpsVisible(id,true); window.renderGpsTrack2(payload,true); if(!window.mmGpsLayers[id]){ try{ var _ll=(payload.points||[]).map(function(p){return [Number(p.lat),Number(p.lon)];}).filter(function(q){return isFinite(q[0])&&isFinite(q[1]);}); if(_ll.length>1){ var _pl=L.polyline(_ll,{color:payload.color||'#00e5ff',weight:2,opacity:.95}).bindTooltip(esc(payload.machine)+' · '+esc(payload.groupKey)+' · '+(payload.pointCount||_ll.length)+' pts',{sticky:true}).addTo(map); window.mmGpsLayers[id]=_pl; try{ map.fitBounds(_pl.getBounds(),{padding:[20,20]}); if(typeof showMap==='function') showMap(); }catch(e){} } }catch(e){ logErr('gpsForceShow', e); } } if(database){ await database.ref('gpsTracks/'+sk(operation)+'/'+id).set(payload); await database.ref('operations/'+code+'/GPS/'+g+'/'+id).set(Object.assign({},payload,{points:null})); } } logs.push(file.name+': '+pts.length+' puntos · '+Object.keys(groups).length+' grupo(s) · '+operation+'/'+machine+(database?' · guardado en Firebase':' · cargado local, Firebase no activo')); } var res=$('gpsCsvResult'); if(res) res.innerHTML=logs.map(esc).join('<br>')+'<br><b>Use “Actualizar mapa operativo desde GPS visible” para pintar pases visuales o “Contar pases desde GPS visible” para guardar histórico.</b>'; try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('removeDuplicateGps', e); } setTimeout(function(){ try{ window.updateTrackingMapFromGps(false); }catch(e){ logErr('removeDuplicateGps', e); } },600); };
   window.updateTrackingMapFromGps=async function(writeDb){ window.mmGpsStripPaintCounts={}; window.mmGpsPaintCounts={}; if(!Object.keys(window.mmGpsCache||{}).length) await loadGpsTracksFromFirebase(); Object.values(window.mmGpsLayers||{}).forEach(function(l){try{map.removeLayer(l);}catch(e){ logErr('removeDuplicateGps', e); }}); window.mmGpsLayers={}; var visible=Object.values(window.mmGpsCache||{}).filter(function(t){return inGpsScope(t);}); visible.filter(function(t){return gpsVisible(t.id);}).forEach(function(t){ window.renderGpsTrack2(t,false); }); /* 09h: el conteo usa todos los tracks en alcance aunque esten ocultos */ var total=0, missingLogic=false; for(const t of visible){ if(typeof window.countTrackByValidPasses==='function'){ var r=await window.countTrackByValidPasses(t,!!writeDb); total+=Number(r&&r.events||0); } else missingLogic=true; } try{ if(typeof renderOperationLayouts==='function') renderOperationLayouts(); if(typeof renderOperationTree==='function') renderOperationTree(); if(typeof renderLayerLibraryTree==='function') renderLayerLibraryTree(sharedLayerData); if(typeof renderPassSummary==='function') renderPassSummary(); }catch(e){ logErr('removeDuplicateGps', e); } var res=$('gpsCsvResult'); if(res) res.innerHTML='Mapa operativo actualizado desde GPS visible: <b>'+visible.length+'</b> track(s) · <b>'+total+'</b> pase(s) válido(s) INICIO/FINAL '+(writeDb?'guardado(s) en histórico.':'pintado(s) visualmente.')+(missingLogic?'<br>No se encontró la lógica estricta de pases.':'' ); return total; };
@@ -7690,7 +7692,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   /* (#5) Maquinas fantasma: no renderizar flota obsoleta (>60 min sin datos) */
   if(typeof window.upsertFleetLayer==='function' && !window.__mmFleetStaleWrapped){
     window.__mmFleetStaleWrapped=true;
-    var _origUpsert=window.upsertFleetLayer, STALE_MS=60*60000;
+    var _origUpsert=window.upsertFleetLayer, STALE_MS=90*60000;
     window.upsertFleetLayer=function(machine,points,operador,live){
       try{
         var last=points&&points.length?points[points.length-1]:null, ts=last&&(last.ts||last.t||last.time);
@@ -7719,9 +7721,136 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
 })();
 </script>
 <script>
+/* MudMaster · 09L: ocultar GPS robusto (resync) + restablecer colores de pases a 0 */
+(function(){
+  function isVis(id){ try{ return localStorage.getItem('gps_track_visible_'+id)!=='false'; }catch(e){ return true; } }
+  function setVis(id,on){ try{ localStorage.setItem('gps_track_visible_'+id, on?'true':'false'); }catch(e){} }
+  function resyncGps(){
+    try{ Object.keys(window.mmGpsLayers||{}).forEach(function(k){ try{ map.removeLayer(window.mmGpsLayers[k]); }catch(e){} }); window.mmGpsLayers={}; }catch(e){}
+    try{ Object.values(window.mmGpsCache||{}).forEach(function(t){ if(t&&t.id&&isVis(t.id) && typeof window.renderGpsTrack2==='function'){ window.renderGpsTrack2(t,false); } }); }catch(e){}
+    try{ if(typeof renderLayerLibraryTree==='function') renderLayerLibraryTree(sharedLayerData); }catch(e){}
+  }
+  window.mmResyncGps=resyncGps;
+  if(typeof window.toggleGpsTrack2==='function' && !window.__mmGpsToggleWrapped){
+    window.__mmGpsToggleWrapped=true;
+    window.toggleGpsTrack2=function(id,on){ setVis(id,!!on); resyncGps(); };
+  }
+
+  /* (G) Restablecer colores de pases a 0 (visual + Firebase) */
+  window.mmResetAllPassColors=async function(all){
+    if(!confirm('Restablecer los colores de pases a 0'+(all?' (todo el historico)':' (solo hoy)')+'?\nNo borra los tracks GPS ni los layouts.')) return;
+    try{ window.mmGpsPaintCounts={}; window.mmGpsStripPaintCounts={}; window.mmLivePassState={}; window.mmPassVisualCounts={}; }catch(e){}
+    try{ var db=(window.fb&&fb.db); if(db){ if(all){ await db.ref('passCounts').remove(); } else { var dk=(typeof todayKey==='function'?todayKey():new Date().toISOString().slice(0,10)); await db.ref('passCounts/'+dk).remove(); } } }catch(e){ try{logErr('mmResetAllPassColors',e);}catch(_){ } }
+    try{ if(typeof window.renderOperationLayouts==='function') window.renderOperationLayouts(); }catch(e){}
+    alert('Colores de pases restablecidos a 0.');
+  };
+  function bindReset(){ var b=document.getElementById('btnResetPassCounts'); if(b && b.__mmReset!==true){ b.__mmReset=true; b.onclick=function(){ window.mmResetAllPassColors(true); }; b.title='Restablecer todos los colores de pases a 0'; } }
+  bindReset(); setTimeout(bindReset,800); setTimeout(bindReset,2200);
+})();
+</script>
+<script>
+/* MudMaster · 09M: estabilidad movil - carga GPS solo admin, descarga posterior, limite de memoria */
+(function(){
+  /* Admin/supervisor: cargar GPS una vez cuando esten listos (los operadores NO cargan GPS) */
+  window.mmLoadGpsForAdmin=async function(){
+    try{ var db=(window.fb&&fb.db); if(!db) return; if(!(fb.admin||fb.supervisor)) return;
+      var snap=await db.ref('gpsTracks').once('value'); var root=snap.val()||{};
+      window.mmGpsCache=window.mmGpsCache||{};
+      Object.entries(root).forEach(function(pair){ var opSafe=pair[0], tracks=pair[1]||{}; Object.entries(tracks).forEach(function(e){ var id=e[0], t=e[1]; if(!t||!Array.isArray(t.points)) return; t.id=t.id||id; t._path='gpsTracks/'+opSafe+'/'+id; window.mmGpsCache[t.id]=t; if(localStorage.getItem('gps_track_visible_'+t.id)!=='false' && typeof window.renderGpsTrack2==='function') window.renderGpsTrack2(t,false); }); });
+      if(typeof renderLayerLibraryTree==='function') renderLayerLibraryTree(sharedLayerData);
+    }catch(e){}
+  };
+  var loaded=false;
+  var iv=setInterval(function(){ try{ if(window.fb && (fb.admin||fb.supervisor) && !loaded){ loaded=true; window.mmLoadGpsForAdmin(); } }catch(e){} }, 2500);
+  setTimeout(function(){ try{ clearInterval(iv); }catch(e){} }, 120000);
+
+  /* Descargar un track GPS luego (admin), desde la nube */
+  window.mmDownloadGpsTrack=function(id){
+    var t=(window.mmGpsCache||{})[id]; if(!t||!t.points||!t.points.length){ alert('No hay track para descargar (ID: '+id+').'); return; }
+    var coords=t.points.map(function(p){ var lo=Number(p.lon!=null?p.lon:p.lng), la=Number(p.lat); return isFinite(lo)&&isFinite(la)?(lo+','+la+',0'):null; }).filter(Boolean).join(' ');
+    var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+String(t.name||id)+'</name>'+
+      '<Placemark><name>'+String(t.machine||id)+'</name><LineString><tessellate>1</tessellate><coordinates>'+coords+'</coordinates></LineString></Placemark></Document></kml>';
+    var blob=new Blob([kml],{type:'application/vnd.google-earth.kml+xml'}); var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=String(t.name||id).replace(/[^\w.-]+/g,'_')+'.kml'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ try{document.body.removeChild(a); URL.revokeObjectURL(url);}catch(e){} },1500);
+  };
+
+  /* Limite de memoria del track en vivo (celular): recorta la VISUAL a los ultimos 5000 puntos.
+     Los datos completos se guardan igual en Firebase/KML; esto solo evita que el navegador se sature. */
+  setInterval(function(){
+    try{ if(typeof polyline!=='undefined' && polyline && polyline.getLatLngs){ var ll=polyline.getLatLngs(); if(ll && ll.length>6000){ polyline.setLatLngs(ll.slice(ll.length-5000)); } } }catch(e){}
+  }, 60000);
+})();
+</script>
+<script>
+/* MudMaster · 09O: Planificacion en Firebase (operador ve su area del dia) + Notificaciones en pantalla */
+(function(){
+  function db(){ return window.fb && fb.db; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[m];}); }
+  function curOp(){ try{ return localStorage.getItem('currentOperation') || (typeof currentOperation!=='undefined'?currentOperation:'') || ''; }catch(e){ return ''; } }
+
+  /* ===== PLANIFICACION: guardar en la nube al guardar manual, y sincronizar a cada dispositivo ===== */
+  document.addEventListener('click', function(ev){
+    var t=ev.target; if(t && t.closest && t.closest('#btnSaveManualPlanning')){
+      setTimeout(function(){ try{ var rows=JSON.parse(localStorage.getItem('manualPlanningRows')||'[]'); if(db()){ db().ref('planning/manualRows').set(rows); } }catch(e){} }, 300);
+    }
+  }, true);
+  function subPlanning(){ if(!db() || window.__mmPlanningSub) return; window.__mmPlanningSub=true;
+    db().ref('planning/manualRows').on('value', function(snap){
+      try{ var rows=snap.val()||[]; localStorage.setItem('manualPlanningRows', JSON.stringify(rows)); if(typeof window.updateDailyActivityBox==='function') window.updateDailyActivityBox(); }catch(e){}
+    });
+  }
+  subPlanning(); setTimeout(subPlanning,1500); setTimeout(subPlanning,3500);
+  setInterval(function(){ try{ if(typeof window.updateDailyActivityBox==='function') window.updateDailyActivityBox(); }catch(e){} }, 60000);
+
+  /* ===== NOTIFICACIONES en pantalla (toast + lista + contador) ===== */
+  function readSet(){ try{ return new Set(JSON.parse(localStorage.getItem('mmNotifRead')||'[]')); }catch(e){ return new Set(); } }
+  function saveRead(s){ try{ localStorage.setItem('mmNotifRead', JSON.stringify(Array.from(s).slice(-300))); }catch(e){} }
+  var toasted=new Set(); var lastRows=[];
+  function ensureToast(){ var el=document.getElementById('mmNotifToast'); if(el) return el;
+    el=document.createElement('div'); el.id='mmNotifToast';
+    el.style.cssText='position:fixed;left:50%;top:14px;transform:translateX(-50%);max-width:92vw;z-index:100000;display:none;background:#12251c;color:#eaffea;border:1px solid #7DCD00;border-radius:10px;padding:12px 16px;box-shadow:0 6px 24px rgba(0,0,0,.5);font-size:14px;cursor:pointer;line-height:1.35;';
+    el.onclick=function(){ el.style.display='none'; };
+    document.body.appendChild(el); return el;
+  }
+  function showToast(html){ var el=ensureToast(); el.innerHTML=html+'<div style="font-size:11px;opacity:.7;margin-top:6px;">(toque para cerrar)</div>'; el.style.display='block'; clearTimeout(el._t); el._t=setTimeout(function(){ el.style.display='none'; }, 18000); }
+  function render(rows){
+    var read=readSet();
+    var cnt=document.getElementById('notificationCount');
+    var unread=rows.filter(function(n){ return !read.has(n.id); });
+    if(cnt){ cnt.style.display=unread.length?'inline-block':'none'; cnt.textContent=unread.length>9?'9+':String(unread.length); }
+    var list=document.getElementById('notificationList');
+    if(list){ list.innerHTML = rows.length ? rows.map(function(n){ return '<div class="notice-item"><b>'+esc(n.operation||'ALL')+'</b> · '+esc(n.createdAt||'')+'<br>'+esc(n.text||'')+'<br><span class="small">'+esc(n.author||'')+'</span></div>'; }).join('') : 'Sin mensajes.'; }
+  }
+  function subNotif(){ if(!db() || window.__mmNotifSub2) return; window.__mmNotifSub2=true;
+    var first=true;
+    db().ref('notifications').limitToLast(30).on('value', function(snap){
+      try{
+        var data=snap.val()||{}, myOp=curOp();
+        var rows=Object.keys(data).map(function(id){ var n=data[id]||{}; n.id=id; return n; })
+          .filter(function(n){ return !n.operation || n.operation==='ALL' || n.operation===myOp; })
+          .sort(function(a,b){ return String(b.createdAt||'').localeCompare(String(a.createdAt||'')); });
+        lastRows=rows;
+        render(rows);
+        if(first){ rows.forEach(function(n){ toasted.add(n.id); }); }
+        else { rows.slice().reverse().forEach(function(n){ if(!toasted.has(n.id)){ toasted.add(n.id); showToast('<b>Mensaje'+(n.operation&&n.operation!=='ALL'?' ('+esc(n.operation)+')':'')+':</b><br>'+esc(n.text||'')); } }); }
+        first=false;
+      }catch(e){}
+    });
+  }
+  subNotif(); setTimeout(subNotif,1500); setTimeout(subNotif,3500);
+  /* al abrir el panel, marcar como leidos (sin romper el onclick existente que abre el modal) */
+  document.addEventListener('click', function(ev){
+    var t=ev.target; if(t && t.closest && t.closest('#notificationBtn')){
+      setTimeout(function(){ try{ var read=readSet(); lastRows.forEach(function(n){ read.add(n.id); }); saveRead(read); render(lastRows); }catch(e){} }, 150);
+    }
+  }, true);
+})();
+</script>
+<script>
 /* MudMaster · Autochequeo (ADITIVO, SOLO LECTURA). Build CONSOLIDADO 2026-07-09b. */
 (function(){
-  var VERSION='2026-07-09k_KML_DIRECT_FLEET';
+  var VERSION='2026-07-09O_PLAN_NOTIF';
   window.__mudmaster_patch_version=VERSION;
   var CRITICAL_DOM=["app", "map", "sidebar", "loginOverlay", "adminModal", "adminRightPanel", "tabPanel", "tabMap", "btnStart", "btnEnd"], BUTTONS=["btnAddReportRow", "btnAdminExportShearCsv", "btnAdminLogin", "btnAdminLogout", "btnAdminToggle", "btnApoyo", "btnApplySvtPointStyle", "btnClearDraftZone", "btnClearManualPlanning", "btnClearOperationConfig", "btnClearParamLines", "btnClearSharedLayers", "btnCloseAdmin", "btnCloseChartExpand", "btnCloseFollow", "btnCloseNotifications", "btnCloseReport", "btnCloseRightAdmin", "btnCloseShearVane", "btnCloseSupervisor", "btnCountGpsCsv", "btnDrawEndLine", "btnDrawStartLine", "btnDrawZone", "btnEditDraftPolygon", "btnEnd", "btnEnterApp", "btnExportDashboardCsv", "btnExportIntensityGeoJson", "btnExportOperationHistoryCsv", "btnExportPlanningCsv", "btnExportResultsCsv", "btnExportShearCsv", "btnExportSvtMasterCsv", "btnExportTopoCsv", "btnExportTopoMasterCsv", "btnGenerateDailyReport", "btnGeneratePlanning", "btnGenerateZone", "btnImportGpsCsv", "btnImportSvPoints", "btnImportSvtCsv", "btnLoadManualPlanning", "btnLoadPlanningAreas", "btnLoadPrevious", "btnManualMode", "btnManualModeOff", "btnManualPlanAddRow", "btnOpenAdminLogin", "btnOpenShearVane", "btnOpenSupervisorLogin", "btnPlanetSyncNow", "btnRefreshLayerLibrary", "btnResetPassCounts", "btnRestoreSelectedZoneVisual", "btnRunTopoCompare", "btnSaveInternalSettings", "btnSaveManualPlanning", "btnSaveManualSvt", "btnSaveOperationConfig", "btnSaveParamLines", "btnSavePassColors", "btnSavePlanetConfig", "btnSaveShearVane", "btnSaveSvtPointStyle", "btnSendNotice", "btnShowSvPoints", "btnShowSvSmartMap", "btnStart", "btnSupervisorLogin", "btnSvtDashboard", "btnUpdateDashboard", "btnUpdateGpsTrackingMap", "btnUpdateResults", "btnUploadImg", "btnUploadKml", "btnUploadManagedLayer", "btnUploadTif", "notificationBtn", "supervisorReportBtn", "tabMap", "tabPanel"];
   function run(){
