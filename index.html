@@ -634,6 +634,141 @@ input[type=color]{height:34px;padding:2px;background:#0f1a12;}
 })();
 </script>
 <script>
+/* MudMaster · 09W ESTABILIDAD MOVIL: apaga en el CELULAR DEL OPERADOR todo lo que es de admin.
+   Causa de los cierres: MutationObservers sobre todo el DOM + 13 intervalos corriendo horas. */
+(function(){
+  function isAdminUser(){
+    try{
+      if(window.fb && (fb.admin===true || fb.supervisor===true)) return true;
+      /* si hay operador logueado (MM + nombre), es celular de operador */
+      var mm=localStorage.getItem('machine')||localStorage.getItem('maquina')||'';
+      var op=localStorage.getItem('operatorName')||'';
+      if(mm||op) return false;
+      return false;
+    }catch(e){ return false; }
+  }
+  window.mmIsOperatorDevice=function(){ return !isAdminUser(); };
+
+  /* 1) MutationObserver: en operador, NO observar el DOM (es lo mas caro en movil) */
+  var NativeMO=window.MutationObserver;
+  if(NativeMO && !window.__mmMOGated){
+    window.__mmMOGated=true;
+    function GatedMO(cb){
+      var inst=new NativeMO(cb);
+      var realObserve=inst.observe.bind(inst);
+      inst.observe=function(target, opts){
+        try{
+          if(window.mmIsOperatorDevice()){
+            /* operador: ignorar observadores globales del body (los de UI admin) */
+            if(target===document.body || target===document.documentElement){
+              console.log('[MM-PERF] MutationObserver global desactivado (dispositivo operador)');
+              return;
+            }
+          }
+        }catch(e){}
+        return realObserve(target, opts);
+      };
+      return inst;
+    }
+    GatedMO.prototype=NativeMO.prototype;
+    window.MutationObserver=GatedMO;
+  }
+
+  /* 2) setInterval: en operador, bloquear los intervalos de UI admin (los rapidos y de DOM) */
+  var nativeSI=window.setInterval;
+  if(!window.__mmSIGated){
+    window.__mmSIGated=true;
+    window.__mmIntervals=[];
+    window.setInterval=function(fn, ms){
+      try{
+        var s=String(fn);
+        var isAdminUI = /wireFleetLegend|iconify|unifyExport|renderSharedKML|mmLoadGpsForAdmin|fleet'\)|mmLiveFleetLayers/.test(s);
+        if(window.mmIsOperatorDevice() && isAdminUI){
+          console.log('[MM-PERF] intervalo de admin bloqueado en operador');
+          return -1;
+        }
+        /* nunca permitir intervalos mas rapidos que 1s en el operador (salvo el cronometro) */
+        if(window.mmIsOperatorDevice() && ms && ms<1000 && !/dTiempo/.test(s)) ms=2000;
+      }catch(e){}
+      var id=nativeSI(fn, ms);
+      try{ window.__mmIntervals.push(id); }catch(e){}
+      return id;
+    };
+  }
+
+  /* 3) Liberar memoria: al ocultar la app (llamada, cambio de app), soltar trabajo pesado */
+  document.addEventListener('visibilitychange', function(){
+    try{
+      if(document.hidden){
+        console.log('[MM-PERF] app en segundo plano: pausando trabajo no esencial');
+        window.__mmHidden=true;
+      } else {
+        window.__mmHidden=false;
+        /* al volver, refrescar el mapa suavemente */
+        setTimeout(function(){ try{ if(window.map && map.invalidateSize) map.invalidateSize(); }catch(e){} }, 400);
+      }
+    }catch(e){}
+  });
+
+  /* 4) Vigilancia de memoria: si el navegador se acerca al limite, recortar el track visual */
+  nativeSI(function(){
+    try{
+      if(!performance || !performance.memory) return;
+      var used=performance.memory.usedJSHeapSize, lim=performance.memory.jsHeapSizeLimit;
+      if(!used||!lim) return;
+      var pct=used/lim;
+      if(pct>0.75){
+        console.warn('[MM-PERF] memoria alta ('+Math.round(pct*100)+'%). Liberando...');
+        try{ if(typeof polyline!=='undefined' && polyline && polyline.getLatLngs){ var ll=polyline.getLatLngs(); if(ll.length>2000) polyline.setLatLngs(ll.slice(ll.length-1500)); } }catch(e){}
+        try{ if(window.mmGpsCache && window.mmIsOperatorDevice()) window.mmGpsCache={}; }catch(e){}
+        try{ if(window.__mmErrors && window.__mmErrors.length>50) window.__mmErrors=window.__mmErrors.slice(-25); }catch(e){}
+      }
+    }catch(e){}
+  }, 45000);
+
+  console.log('[MM-PERF] proteccion de estabilidad activa. Operador =', (function(){try{return window.mmIsOperatorDevice();}catch(e){return '?';}})());
+})();
+</script>
+
+<script>
+/* MudMaster · 09R CIRUGIA: UN SOLO rastreo GPS. Los watchPosition duplicados (legacy) quedan anulados. */
+(function(){
+  if(!navigator.geolocation || window.__mmSingleWatch) return;
+  window.__mmSingleWatch=true;
+  var geo=navigator.geolocation;
+  var origWatch=geo.watchPosition.bind(geo);
+  var origClear=geo.clearWatch.bind(geo);
+  var activeId=null;
+  window.__mmWatchOwner=null;
+
+  function callerIsRecoverable(){
+    try{ var e=new Error(); var st=String(e.stack||''); return st.indexOf('startGpsWatchRecoverable')>=0; }catch(_){ return false; }
+  }
+  geo.watchPosition=function(success, error, opts){
+    var owner = callerIsRecoverable() ? 'recoverable' : 'legacy';
+    if(owner==='legacy' && window.__mmWatchOwner==='recoverable'){
+      console.warn('[MM-GPS] watchPosition LEGACY bloqueado (ya hay rastreo recuperable activo).');
+      return -1; /* id falso: no registra un segundo watch */
+    }
+    if(activeId!==null){
+      try{ origClear(activeId); }catch(e){}
+      console.warn('[MM-GPS] watch anterior cerrado ('+window.__mmWatchOwner+') -> nuevo owner: '+owner);
+    }
+    activeId=origWatch(success, error, opts);
+    window.__mmWatchOwner=owner;
+    console.log('[MM-GPS] rastreo unico activo. owner =', owner, 'id =', activeId);
+    return activeId;
+  };
+  geo.clearWatch=function(id){
+    if(id===-1) return;               /* id falso del legacy bloqueado */
+    if(id===activeId){ activeId=null; window.__mmWatchOwner=null; }
+    try{ return origClear(id); }catch(e){}
+  };
+  window.mmWatchStatus=function(){ console.log('[MM-GPS] owner:',window.__mmWatchOwner,'id:',activeId); return {owner:window.__mmWatchOwner,id:activeId}; };
+})();
+</script>
+
+<script>
 window.__mmErrors = window.__mmErrors || [];
 function logErr(ctx, e) {
   try {
@@ -1888,7 +2023,7 @@ if(document.getElementById('operatorShowLayout')) document.getElementById('opera
 let watchId=null,trackPoints=[],ownMarker=null,polyline=null,startTime=null,endTime=null,timerInterval=null,lastLatLng=null,totalDist=0,jornadaActiva=false,currentMachine=null,prevTs=null;
 function fmtTime(sec){const h=String(Math.floor(sec/3600)).padStart(2,'0'),m=String(Math.floor((sec%3600)/60)).padStart(2,'0'),s=String(Math.floor(sec%60)).padStart(2,'0');return `${h}:${m}:${s}`;}
 function estimateSpeed(a,b){const dist=map.distance(a,b),now=Date.now(),dt=prevTs?(now-prevTs)/1000:1;prevTs=now;return dt>0?(dist/dt)*3.6:0;}
-document.getElementById('btnStart').onclick=async()=>{if(jornadaActiva)return; const operador=document.getElementById('operador').value.trim(), maquina=document.getElementById('maquina').value.trim(); if(!operador||!maquina){alert('Ingrese operador y MMn° antes de iniciar.');return;} if(!navigator.geolocation){document.getElementById('gpsWarning').style.display='block';alert('Este dispositivo no soporta geolocalización.');return;} try{await ensureAnonymous();}catch(e){ logErr('estimateSpeed', e); } jornadaActiva=true;currentMachine=maquina;trackPoints=[];totalDist=0;lastLatLng=null;prevTs=null;startTime=new Date();document.getElementById('dOperador').textContent=operador;document.getElementById('dMaquina').textContent=maquina;document.getElementById('dInicio').textContent=isoLocal(startTime);document.getElementById('status').textContent='Jornada en curso - GPS activo';document.getElementById('status').className='status-live';document.getElementById('gpsWarning').style.display='none';document.getElementById('btnStart').disabled=true;document.getElementById('btnStart').textContent='🔒 Jornada en curso';document.getElementById('btnEnd').disabled=false;document.getElementById('operador').disabled=true;document.getElementById('maquina').disabled=true; const ownColor=colorForMachine(maquina); if(polyline)map.removeLayer(polyline); if(ownMarker)map.removeLayer(ownMarker); polyline=L.polyline([],{color:ownColor,weight:5,opacity:1}).addTo(map); ownMarker=L.marker([-33.45,-70.65],{icon:L.divIcon({className:'',html:`<div style="background:${ownColor};width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.7)"></div>`,iconSize:[16,16]})}).addTo(map); ownMarker.bindTooltip('',{permanent:true,direction:'top',offset:[0,-12],className:'live-badge'}); timerInterval=setInterval(()=>document.getElementById('dTiempo').textContent=fmtTime((new Date()-startTime)/1000),1000); watchId=navigator.geolocation.watchPosition(async pos=>{const {latitude,longitude,speed}=pos.coords,ll=[latitude,longitude],prevLL=lastLatLng?[lastLatLng[0],lastLatLng[1]]:null,kmh=speed?(speed*3.6):(lastLatLng?estimateSpeed(lastLatLng,ll):0); if(lastLatLng)totalDist+=map.distance(lastLatLng,ll)/1000; lastLatLng=ll; trackPoints.push({lat:latitude,lon:longitude,ts:new Date().toISOString(),speed:Number(kmh.toFixed(1)),maquina,operador}); ownMarker.setLatLng(ll); polyline.addLatLng(ll); map.panTo(ll); const elapsed=fmtTime((new Date()-startTime)/1000); ownMarker.setTooltipContent(`<b>${maquina}</b><br>${operador}<br>${kmh.toFixed(1)} km/h · ${totalDist.toFixed(1)} km<br>${elapsed}`); document.getElementById('dSpeed').textContent=kmh.toFixed(1)+' km/h';document.getElementById('dDist').textContent=totalDist.toFixed(2)+' km';document.getElementById('dPuntos').textContent=trackPoints.length; upsertFleetLayer(maquina,trackPoints,operador,true); await publishFleet(maquina,operador,trackPoints,true); await processControlLineCrossings(prevLL,ll,maquina,operador,kmh);},err=>{document.getElementById('gpsWarning').style.display='block';alert('Error GPS: '+err.message);},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});};
+document.getElementById('btnStart').onclick=async()=>{if(jornadaActiva)return; const operador=document.getElementById('operador').value.trim(), maquina=document.getElementById('maquina').value.trim(); if(!operador||!maquina){alert('Ingrese operador y MMn° antes de iniciar.');return;} if(!navigator.geolocation){document.getElementById('gpsWarning').style.display='block';alert('Este dispositivo no soporta geolocalización.');return;} try{await ensureAnonymous();}catch(e){ logErr('estimateSpeed', e); } jornadaActiva=true;currentMachine=maquina;trackPoints=[];totalDist=0;lastLatLng=null;prevTs=null;startTime=new Date();document.getElementById('dOperador').textContent=operador;document.getElementById('dMaquina').textContent=maquina;document.getElementById('dInicio').textContent=isoLocal(startTime);document.getElementById('status').textContent='Jornada en curso - GPS activo';document.getElementById('status').className='status-live';document.getElementById('gpsWarning').style.display='none';document.getElementById('btnStart').disabled=true;document.getElementById('btnStart').textContent='🔒 Jornada en curso';document.getElementById('btnEnd').disabled=false;document.getElementById('operador').disabled=true;document.getElementById('maquina').disabled=true; const ownColor=colorForMachine(maquina); if(polyline)map.removeLayer(polyline); if(ownMarker)map.removeLayer(ownMarker); polyline=L.polyline([],{color:ownColor,weight:5,opacity:1}).addTo(map); ownMarker=L.marker([-33.45,-70.65],{icon:L.divIcon({className:'',html:`<div style="background:${ownColor};width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.7)"></div>`,iconSize:[16,16]})}).addTo(map); ownMarker.bindTooltip('',{permanent:true,direction:'top',offset:[0,-12],className:'live-badge'}); timerInterval=setInterval(()=>document.getElementById('dTiempo').textContent=fmtTime((new Date()-startTime)/1000),1000); watchId=(window.__mmLegacyWatchDisabled?null:navigator.geolocation.watchPosition(async pos=>{const {latitude,longitude,speed}=pos.coords,ll=[latitude,longitude],prevLL=lastLatLng?[lastLatLng[0],lastLatLng[1]]:null,kmh=speed?(speed*3.6):(lastLatLng?estimateSpeed(lastLatLng,ll):0); if(lastLatLng)totalDist+=map.distance(lastLatLng,ll)/1000; lastLatLng=ll; trackPoints.push({lat:latitude,lon:longitude,ts:new Date().toISOString(),speed:Number(kmh.toFixed(1)),maquina,operador}); ownMarker.setLatLng(ll); polyline.addLatLng(ll); map.panTo(ll); const elapsed=fmtTime((new Date()-startTime)/1000); ownMarker.setTooltipContent(`<b>${maquina}</b><br>${operador}<br>${kmh.toFixed(1)} km/h · ${totalDist.toFixed(1)} km<br>${elapsed}`); document.getElementById('dSpeed').textContent=kmh.toFixed(1)+' km/h';document.getElementById('dDist').textContent=totalDist.toFixed(2)+' km';document.getElementById('dPuntos').textContent=trackPoints.length; upsertFleetLayer(maquina,trackPoints,operador,true); await publishFleet(maquina,operador,trackPoints,true); await processControlLineCrossings(prevLL,ll,maquina,operador,kmh);},err=>{document.getElementById('gpsWarning').style.display='block';alert('Error GPS: '+err.message);},{enableHighAccuracy:true,maximumAge:1000,timeout:15000}));};
 
 document.getElementById('btnEnd').onclick=async()=>{if(watchId!==null)navigator.geolocation.clearWatch(watchId); clearInterval(timerInterval); jornadaActiva=false; endTime=new Date(); document.getElementById('status').textContent='Jornada finalizada';document.getElementById('status').className='status-off';document.getElementById('btnStart').disabled=false;document.getElementById('btnStart').textContent='▶ Iniciar Día';document.getElementById('btnEnd').disabled=true;document.getElementById('operador').disabled=false;document.getElementById('maquina').disabled=false; const operador=document.getElementById('operador').value, maquina=document.getElementById('maquina').value; const startFile=fileDate(startTime||new Date()), endFile=fileDate(endTime); const kml=buildKML(trackPoints,operador,maquina,startTime,endTime,totalDist); const filename=`recorrido_${safeKey(maquina)}_${startFile}_${endFile}.kml`; const record={id:Date.now(),filename,fecha:isoLocal(endTime),startISO:startTime?startTime.toISOString():null,endISO:endTime.toISOString(),startFile,endFile,operador,maquina,puntos:trackPoints.length,distancia:totalDist.toFixed(2),points:trackPoints,kml}; const db=JSON.parse(localStorage.getItem('trackerDB')||'[]'); db.push(record); localStorage.setItem('trackerDB',JSON.stringify(db)); await publishFleet(maquina,operador,trackPoints,false); if(polyline){try{map.removeLayer(polyline)}catch(e){ logErr('estimateSpeed', e); } polyline=null;} if(ownMarker){try{map.removeLayer(ownMarker)}catch(e){ logErr('estimateSpeed', e); } ownMarker=null;} currentMachine=null; await saveSession(record); downloadFile(filename,kml); renderHistory();};
 function buildKML(points,operador,maquina,ini,fin,dist){const coords=points.map(p=>`${p.lon},${p.lat},0`).join(' '); const placemarks=points.map(p=>`<Placemark><name>${p.ts}</name><description>Velocidad: ${p.speed} km/h | MudMaster: ${p.maquina} | Operador: ${p.operador}</description><Point><coordinates>${p.lon},${p.lat},0</coordinates></Point></Placemark>`).join(''); return `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Recorrido ${maquina}</name><description>Operador: ${operador} | Inicio: ${ini?ini.toISOString():''} | Termino: ${fin?fin.toISOString():''} | Distancia km: ${dist.toFixed(2)}</description><Style id="lineStyle"><LineStyle><color>ff00cd7d</color><width>4</width></LineStyle></Style><Placemark><name>Traza ${maquina}</name><styleUrl>#lineStyle</styleUrl><LineString><tessellate>1</tessellate><coordinates>${coords}</coordinates></LineString></Placemark>${placemarks}</Document></kml>`;}
@@ -2874,16 +3009,8 @@ if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWo
       .filter(n=>!n.operation||n.operation==='ALL'||n.operation===currentOperation)
       .sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   }
-  window.markNotificationRead=async function(id){
-    setSeen(id);
-    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/readBy/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({at:isoLocal(new Date())}); }catch(e){ logErr('scopedNotifications', e); }
-    renderNotifications();
-  };
-  window.reactNotificationThumb=async function(id){
-    setSeen(id);
-    try{ if(fb.db) await fb.db.ref('notifications/'+id+'/reactions/'+safeKey((fb.auth.currentUser&& (fb.auth.currentUser.email||fb.auth.currentUser.uid))||localStorage.getItem('operatorName')||'viewer')).set({reaction:'thumbs_up',at:isoLocal(new Date())}); }catch(e){ logErr('scopedNotifications', e); }
-    renderNotifications();
-  };
+  /* [09R] muerta: markNotificationRead */ 
+  /* [09R] muerta: reactNotificationThumb */ 
   renderNotifications=function(){
     const list=document.getElementById('notificationList'), cnt=document.getElementById('notificationCount');
     const rows=scopedNotifications();
@@ -3297,7 +3424,7 @@ if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWo
   const _renderLayerControls2 = renderLayerControls;
   /* [capas-consolidado] duplicada muerta renderLayerControls */ 
   const _renderAllSharedLayers2 = renderAllSharedLayers;
-  window.renderAllSharedLayers=function(data){ const r=_renderAllSharedLayers2(data); renderLayerLibraryTree(sharedLayerData); return r; };
+  /* [09R] muerta: renderAllSharedLayers */ 
 
   function downloadTextFile(name, content, type='application/json'){
     const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
@@ -4310,10 +4437,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   function saveSeen(m){ localStorage.setItem(SEEN_KEY, JSON.stringify(m||{})); }
   function markSeen(id){ const m=seenMap(); m[id]=Date.now(); saveSeen(m); }
   function notifRows(){ return Object.entries(notificationsCache||{}).map(([id,n])=>({id,...n})).filter(n=>!n.operation||n.operation==='ALL'||n.operation===currentOperation).sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||''))); }
-  window.deleteNotificationAdmin = async function(id){
-    if(!(fb.admin||fb.supervisor) || !fb.db){ alert('Solo admin/supervisor puede borrar mensajes.'); return; }
-    if(confirm('¿Borrar este mensaje para todos?')) await fb.db.ref('notifications/'+id).remove();
-  };
+  /* [09R] muerta: deleteNotificationAdmin */ 
   window.deleteAllScopedNotificationsAdmin = async function(){
     if(!(fb.admin||fb.supervisor) || !fb.db){ alert('Solo admin/supervisor puede borrar mensajes.'); return; }
     const rows=notifRows(); if(!rows.length){ alert('No hay mensajes para borrar.'); return; }
@@ -4383,10 +4507,10 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     const layer=L.polyline(t.points.map(p=>[p.lat,p.lon]),{color:t.color||'#00e5ff',weight:1.6,opacity:.9}).bindTooltip(`${esc(t.machine)} · ${esc(t.groupKey)} · ${t.pointCount||t.points.length} pts`,{sticky:true});
     layer.addTo(map); window.mmGpsLayers[t.id]=layer; if(fit){ try{ map.fitBounds(layer.getBounds(),{padding:[20,20]}); showMap&&showMap(); }catch(e){ logErr('setGpsVisible', e); } }
   };
-  window.toggleGpsTrack2=function(id,on){ setGpsVisible(id,on); const t=window.mmGpsCache[id]; if(on) renderGpsTrack2(t,true); else if(window.mmGpsLayers[id]){ try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('setGpsVisible', e); } delete window.mmGpsLayers[id]; } setTimeout(()=>{try{renderLayerLibraryTree(sharedLayerData)}catch(e){ logErr('setGpsVisible', e); }},80); };
-  window.zoomGpsTrack2=function(id){ const l=window.mmGpsLayers[id]; if(l){ try{map.fitBounds(l.getBounds(),{padding:[20,20]}); showMap&&showMap();}catch(e){ logErr('setGpsVisible', e); } } else if(window.mmGpsCache[id]) renderGpsTrack2(window.mmGpsCache[id],true); };
-  window.editGpsTrackColor=function(id){ const t=window.mmGpsCache[id]; if(!t) return; const c=prompt('Nuevo color HEX para esta capa GPS:', t.color||'#00e5ff'); if(!c) return; const color=c.trim(); const path=t._path; if(fb.db&&path) fb.db.ref(path+'/color').set(color); t.color=color; renderGpsTrack2(t,false); renderLayerLibraryTree(sharedLayerData); };
-  window.deleteGpsTrackLayer=async function(id){ const t=window.mmGpsCache[id]; if(!t||!fb.db) return; if(!confirm('¿Borrar esta capa GPS?')) return; if(t._path) await fb.db.ref(t._path).remove(); if(t._opCode&&t.groupKey) await fb.db.ref(`operations/${t._opCode}/GPS/${t.groupKey}/${id}`).remove().catch(()=>{}); if(window.mmGpsLayers[id]){try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('setGpsVisible', e); }} delete window.mmGpsCache[id]; delete window.mmGpsLayers[id]; renderLayerLibraryTree(sharedLayerData); };
+  /* [09R] muerta: toggleGpsTrack2 */ 
+  /* [09R] muerta: zoomGpsTrack2 */ 
+  /* [09R] muerta: editGpsTrackColor */ 
+  /* [09R] muerta: deleteGpsTrackLayer */ 
   window.exportGpsTrack2=function(id){ const t=window.mmGpsCache[id]; if(!t) return; const rows=['dt_tracker,lat,lng,speed,altitude,machine,operation,group'].concat((t.points||[]).map(p=>[p.ts,p.lat,p.lon,p.speed??'',p.altitude??'',t.machine,t.operation,t.groupKey].map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(','))); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'})); a.download=`${t.machine}_${t.groupKey}_gps.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); };
 
   async function importGpsCsvFiles2(){
@@ -4572,17 +4696,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     });
     if(bounds){ map.fitBounds(bounds,{padding:[25,25]}); showMap&&showMap(); }
   };
-  window.deleteLayerFolder=async function(kind, idsCsv){
-    const ids=String(idsCsv||'').split('|').filter(Boolean); if(!ids.length) return;
-    if(!hasAdminPower()){ alert('Solo admin/supervisor puede borrar capas.'); return; }
-    if(!confirm(`¿Borrar ${ids.length} elemento(s) seleccionados?`)) return;
-    for(const id of ids){
-      if(kind==='shared'){ const rec=sharedRec(id); if(rec?.critical) continue; await deleteSharedLayer(id); }
-      if(kind==='gps'){ await (window.deleteGpsTrackLayer && window.deleteGpsTrackLayer(id)); }
-      if(kind==='layout'){ alert('Las áreas operacionales no se borran en lote por seguridad. Use editar/gestionar área.'); break; }
-    }
-    setTimeout(()=>{ try{renderLayerLibraryTree(sharedLayerData);}catch(_e){ logErr('extend', _e); } },200);
-  };
+  /* [09R] muerta: deleteLayerFolder */ 
   window.bulkEditGpsColor=function(idsCsv, color){ String(idsCsv||'').split('|').filter(Boolean).forEach(id=>window.setGpsTrackColor && window.setGpsTrackColor(id,color)); };
   window.setGpsTrackColor=function(id, color){
     const t=window.mmGpsCache?.[id] || (typeof gpsTrackCache!=='undefined'?gpsTrackCache?.[id]:null); if(!t) return;
@@ -4830,34 +4944,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   /* [consolidado] duplicada countVisibleGpsCsvAgainstLines2 */ 
 
   // Render de layout usando conteo por franja/polígono, no por línea individual.
-  window.renderOperationLayouts=function(){
-    Object.values(operationLayoutLayers||{}).forEach(function(g){try{map.removeLayer(g);}catch(e){ logErr('_registerPass', e); }}); operationLayoutLayers={};
-    var show=document.getElementById('showControlLines'), opToggle=document.getElementById('operatorShowLayout');
-    var allowView=(fb&&fb.admin)||(fb&&fb.supervisor)||(opToggle&&opToggle.checked); if(!allowView) return; if(fb&&fb.admin&&show&&!show.checked) return;
-    Object.entries((typeof scopedLayouts==='function'?scopedLayouts(operationLayouts):operationLayouts)||{}).forEach(function(pair){
-      var zoneKey=pair[0], z=pair[1]; if(!zoneVisible(zoneKey)) return;
-      var group=L.layerGroup();
-      if(z.polygon) L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);
-      var strips=_getStripInfo(zoneKey,z);
-      strips.forEach(function(strip){
-        var c=window.getStripPassCount(zoneKey,strip.key), color=c>0?lineColorByCount(c,getZoneBaseColor(z)):'#ffffff';
-        var interactive=!!(typeof manualMode!=='undefined'&&manualMode);
-        var polyLL=strip.poly.map(function(xy){return strip.proj.toLL(xy);});
-        var poly=L.polygon(polyLL,{className:interactive?'strip-manual-hover':'operation-line-strip',color:interactive?'#ff6d00':color,weight:interactive?1:(c>0?1:0),fillColor:color,fillOpacity:c>0?0.42:0.035,interactive:interactive}).bindTooltip((typeof layoutDisplayName==='function'?layoutDisplayName(z,zoneKey):zoneKey)+' · Franja '+(strip.idx+1)+' · pases: '+c,{sticky:true});
-        if(interactive) poly.on('click',function(){ if(typeof manualStripClick==='function') manualStripClick(zoneKey,strip); });
-        poly.addTo(group);
-      });
-      Object.entries(z.lines||{}).forEach(function(p,idx){
-        var lk=p[0],l=p[1], color=getZoneBaseColor(z);
-        L.polyline([l.a,l.b],{color:color,weight:1,opacity:.78,interactive:false}).bindTooltip((l.name||lk)+' · línea operacional',{sticky:true}).addTo(group);
-        if(idx===0||(idx+1)%5===0){ L.marker(lineMidLL(l),{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label">'+(idx+1)+'</span>',iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group); }
-      });
-      try{var center=z.polygon?latLngCentroid(z.polygon):null; if(center)L.marker([center.lat,center.lng],{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label" style="font-size:12px;background:rgba(10,20,12,.92);">'+_esc(typeof layoutDisplayName==='function'?layoutDisplayName(z,zoneKey):zoneKey)+'</span>',iconSize:[100,20],iconAnchor:[50,10]})}).addTo(group);}catch(e){ logErr('_registerPass', e); }
-      if(fb&&fb.admin&&z.show_start_line!==false&&z.start_line&&z.start_line.length>=2)L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('INICIO · parámetro de pase',{sticky:true}).addTo(group);
-      if(fb&&fb.admin&&z.show_end_line!==false&&z.end_line&&z.end_line.length>=2)L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('FINAL · parámetro de pase',{sticky:true}).addTo(group);
-      group.addTo(map); operationLayoutLayers[zoneKey]=group;
-    });
-  };
+  /* [09R] muerta: renderOperationLayouts */ 
 
   // Reenganchar botones GPS porque varias versiones clonaron el botón.
   function _hookGpsButtons(){
@@ -4987,15 +5074,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     try{map.fitBounds(editHighlightLayer.getBounds(),{padding:[35,35]});}catch(e){ logErr('enhanceLayerLibraryRows', e); }
   };
   var _baseEditOperationZone = window.editOperationZone || (typeof editOperationZone==='function' ? editOperationZone : null);
-  window.editOperationalAreaFromLayers=function(zoneKey){
-    window.highlightOperationalArea(zoneKey);
-    document.querySelectorAll('#layerLibraryTree .qgis-layer-row').forEach(function(r){r.classList.toggle('editing-area', r.textContent.includes(((operationLayouts[zoneKey]||{}).name)||zoneKey));});
-    if(_baseEditOperationZone) _baseEditOperationZone(zoneKey);
-    setTimeout(function(){
-      try{ if(typeof editDraftPolygonVertices==='function' && window.draftZoneLayer!==null && !window.draftEditHandler) editDraftPolygonVertices(); }
-      catch(e){ try{ if(typeof editDraftPolygonVertices==='function') editDraftPolygonVertices(); }catch(_e){ logErr('enhanceLayerLibraryRows', _e); } }
-    },700);
-  };
+  /* [09R] muerta: editOperationalAreaFromLayers */ 
   if(_baseEditOperationZone && !_baseEditOperationZone._patched20260708A){
     /* [consolidado] duplicada editOperationZone */ 
   }
@@ -6440,7 +6519,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   try{processControlLineCrossings=window.processControlLineCrossings}catch(e){ logErr('regPass', e); }
 
   window.getStripPassCount=function(zoneKey,key){return lineTotal(zoneKey,key)+visual(zoneKey,key)}
-  window.renderOperationLayouts=function(){try{Object.values(operationLayoutLayers||{}).forEach(function(g){try{map.removeLayer(g)}catch(e){ logErr('regPass', e); }});operationLayoutLayers={}}catch(e){ logErr('regPass', e); }var opToggle=$('operatorShowLayout'),show=$('showControlLines'),allow=admin()||(opToggle&&opToggle.checked);if(!allow)return;if(admin()&&show&&!show.checked)return;var o=op();Object.entries(operationLayouts||{}).forEach(function(pair){var zoneKey=pair[0],z=pair[1];if(!opOk(z,o))return;if(typeof zoneVisible==='function'&&!zoneVisible(zoneKey))return;var group=L.layerGroup();if(z.polygon)L.polygon(z.polygon,{color:'#ff3b30',weight:2,fill:false,dashArray:'4,4'}).addTo(group);strips(zoneKey,z).forEach(function(s){var c=window.getStripPassCount(zoneKey,s.key),color=c>0?lineColorByCount(c,getZoneBaseColor(z)):'#ffffff',ll=s.poly.map(function(xy){return s.proj.toLL(xy)});L.polygon(ll,{className:'operation-line-strip',color:c>0?color:'#666',weight:c>0?1:0,fillColor:color,fillOpacity:c>0?.42:.035,interactive:false}).bindTooltip(esc(s.name)+' · pases: '+c,{sticky:true}).addTo(group)});Object.entries(z.lines||{}).forEach(function(p,idx){var l=p[1];L.polyline([l.a,l.b],{color:getZoneBaseColor(z),weight:1,opacity:.78,interactive:false}).addTo(group);if(idx===0||(idx+1)%5===0){try{L.marker(midLine(l),{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label">'+(idx+1)+'</span>',iconSize:[36,16],iconAnchor:[18,8]})}).addTo(group)}catch(e){ logErr('regPass', e); }}});try{var cc=z.polygon?ctr(z.polygon):null;if(cc)L.marker([cc.lat,cc.lng],{interactive:false,icon:L.divIcon({className:'',html:'<span class="line-label" style="font-size:12px">'+esc((typeof layoutDisplayName==='function'?layoutDisplayName(z,zoneKey):(z.name||zoneKey)))+'</span>',iconSize:[120,20],iconAnchor:[60,10]})}).addTo(group)}catch(e){ logErr('regPass', e); }if(admin()&&z.show_start_line!==false&&z.start_line)L.polyline(z.start_line,{color:'#ff6d00',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('INICIO · pase',{sticky:true}).addTo(group);if(admin()&&z.show_end_line!==false&&z.end_line)L.polyline(z.end_line,{color:'#00e5ff',weight:4,opacity:.95,dashArray:'8,4'}).bindTooltip('FINAL · pase',{sticky:true}).addTo(group);group.addTo(map);operationLayoutLayers[zoneKey]=group})}
+  /* [09R] muerta: renderOperationLayouts */ 
   try{renderOperationLayouts=window.renderOperationLayouts;setTimeout(renderOperationLayouts,500)}catch(e){ logErr('regPass', e); }
 
   window.renderNotifications=function(){var list=$('notificationList'),cnt=$('notificationCount'),o=op(),rows=Object.entries(window.notificationsCache||{}).map(function(p){var n=p[1]||{};n.id=p[0];return n}).filter(function(n){return !n.operation||n.operation==='ALL'||n.operation===o||admin()}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});if(list)list.innerHTML=rows.map(function(n){var del=admin()?'<button onclick="mmDeleteNotification(\''+esc(n.id)+'\')">Borrar</button>':'';return'<div class="notice-item"><b>'+esc(n.operation||'ALL')+'</b> · '+esc(n.createdAt||'')+'<br>'+esc(n.text||'')+'<br><span class="small">'+esc(n.author||'')+'</span><div class="notice-actions"><button onclick="markNotificationRead&&markNotificationRead(\''+esc(n.id)+'\')">Leído</button><button onclick="reactNotificationThumb&&reactNotificationThumb(\''+esc(n.id)+'\')">👍</button>'+del+'</div></div>'}).join('')||'Sin mensajes.';if(cnt){cnt.textContent=rows.length;cnt.style.display=rows.length?'inline-block':'none'}}
@@ -6700,17 +6779,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     return Promise.resolve(false);
   }
   window.mmStrictPassState=window.mmStrictPassState||{};
-  window.processControlLineCrossings=async function(prevLL,currLL,machine,operator,kmh){
-    if(!currLL||!operationLayouts) return;
-    var operation=activeOp(), code=opCodeLocal(operation), pt={lat:Number(currLL[0]),lon:Number(currLL[1]),speed:Number(kmh||0),ts:new Date().toISOString()};
-    if(!Number.isFinite(pt.lat)||!Number.isFinite(pt.lon)) return;
-    for(const entry of Object.entries(operationLayouts||{})){
-      var zoneKey=entry[0],z=entry[1]; if(!layoutMatchesOp(z,operation,code)) continue;
-      for(const strip of buildStrictStrips(zoneKey,z)){
-        await processPointAgainstStrip(pt,strip,key(machine+'_'+zoneKey+'_'+strip.key),machine||'MM',operator||'', 'live_gps_strict_pass', '', true);
-      }
-    }
-  };
+  /* [09R] muerta: processControlLineCrossings */ 
   window.countTrackByValidPasses=async function(track,writeDb){
     if(!track||!track.points||track.points.length<2) return {events:0};
     var operation=track.operation||activeOp(), code=track.operationCode||opCodeLocal(operation), total=0;
@@ -6783,6 +6852,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
 <script>
 /* PATCH 2026-07-08O: jornada activa recuperable + huecos GPS */
 (function(){
+  try{ window.mmStartSession=startNewRecoverableSession; window.mmFinishSession=finishRecoverableSession; }catch(_){}  /* 09S: exponer sesion canonica */
   window.__mudmaster_patch_version = '2026-07-08O_active_session_recovery';
   var GAP_MS = 5 * 60 * 1000;
   var SAVE_THROTTLE_MS = 12000;
@@ -6988,7 +7058,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
     try{ if(polyline){ map.removeLayer(polyline); polyline=null; } if(ownMarker){ map.removeLayer(ownMarker); ownMarker=null; } }catch(e){ logErr('finishRecoverableSession', e); }
     try{ currentMachine=null; }catch(e){ logErr('finishRecoverableSession', e); }
     /* KML solo en la nube (Firebase). La descarga la hace el admin luego con mmDownloadGpsTrack(id). */
-    try{ var _db3=dbase(); if(_db3 && trackPoints && trackPoints.length){ var _tid=key(machine)+'_'+startFile; var _gp={id:_tid, machine:machine, name:'Jornada '+machine+' '+startFile, operation:op, operationCode:code, groupKey:dayKey(record.startISO), color:'#00e5ff', source:'jornada_operador', pointCount:trackPoints.length, createdAt:nowIso(), points:trackPoints}; await _db3.ref('gpsTracks/'+code+'/'+_tid).set(_gp); } }catch(e){ logErr('finishRecoverableSession:gpsLayer', e); }
+    try{ var _db3=dbase(); if(_db3 && trackPoints && trackPoints.length){ var _tid=key(machine)+'_'+startFile; var _gp={id:_tid, machine:machine, name:'Jornada '+machine+' '+startFile, operation:op, operationCode:code, groupKey:dayKey(record.startISO), color:'#00e5ff', source:'jornada_operador', pointCount:trackPoints.length, createdAt:nowIso(), points:trackPoints}; await _db3.ref('gpsTracks/'+code+'/'+_tid).set(_gp); try{ if(typeof window.mmUploadDayGpsToStorage==='function') await window.mmUploadDayGpsToStorage(_gp); }catch(e){ logErr('finishRecoverableSession:storage', e); } } }catch(e){ logErr('finishRecoverableSession:gpsLayer', e); }
     updateStatus('Jornada finalizada','status-off');
     if($('btnStart')){ $('btnStart').disabled=false; $('btnStart').textContent='▶ Iniciar Día'; }
     if($('btnEnd')) $('btnEnd').disabled=true;
@@ -6999,21 +7069,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   }
 
   // Mostrar tracks vivos con huecos también en mapa admin/supervisor/operador.
-  window.upsertFleetLayer=function(machine,points,operador,live){
-    if(!points||!points.length||typeof map==='undefined') return;
-    var col; try{ col=colorForMachine(machine); }catch(e){ col='#7DCD00'; }
-    var segs=latLngSegments(points), flat=[]; segs.forEach(function(s){ flat=flat.concat(s); }); if(!flat.length) return;
-    window.mmLiveFleetLayers=window.mmLiveFleetLayers||{};
-    var r=window.mmLiveFleetLayers[machine] || (typeof fleetLayers!=='undefined' ? fleetLayers[machine] : null);
-    if(!r){
-      var pl=L.polyline(segs,{color:col,weight:live?5:4,opacity:live?.95:.75}).addTo(map);
-      var mk=L.marker(flat[flat.length-1],{icon:L.divIcon({className:'',html:'<div style="background:'+col+';width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 5px rgba(0,0,0,.7)"></div>',iconSize:[14,14]})}).addTo(map);
-      try{ mk.bindTooltip('',{permanent:true,direction:'top',offset:[0,-10],className:'live-badge'}); }catch(e){ logErr('finishRecoverableSession', e); }
-      r={polyline:pl,marker:mk,color:col}; window.mmLiveFleetLayers[machine]=r; try{ fleetLayers[machine]=r; }catch(e){ logErr('finishRecoverableSession', e); }
-    }else{ try{ r.polyline.setLatLngs(segs); r.marker.setLatLng(flat[flat.length-1]); }catch(e){ logErr('finishRecoverableSession', e); } }
-    var last=(points||[])[(points||[]).length-1]||{}; try{ r.marker.setTooltipContent('<b>'+machine+'</b><br>'+(operador||'')+'<br>'+(last.speed||0)+' km/h<br>'+new Date(last.ts||Date.now()).toLocaleTimeString()); }catch(e){ logErr('finishRecoverableSession', e); }
-    try{ renderLegend(); }catch(e){ logErr('finishRecoverableSession', e); }
-  };
+  /* [09R] muerta: upsertFleetLayer */ 
   try{ upsertFleetLayer=window.upsertFleetLayer; }catch(e){ logErr('finishRecoverableSession', e); }
 
   var bStart=$('btnStart'), bEnd=$('btnEnd'), bEnter=$('btnEnterApp');
@@ -7065,7 +7121,7 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
   function pointSegments(points){ var segs=[],cur=[]; (points||[]).forEach(function(p,i){ var ll=[Number(p.lat),Number(p.lon)]; if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1])) return; if(i>0){ var prev=points[i-1]; var gap=(new Date(p.ts).getTime()||0)-(new Date(prev.ts).getTime()||0); if(gap>GPS_GAP_MS && cur.length){ segs.push(cur); cur=[]; } } cur.push(ll); }); if(cur.length) segs.push(cur); return segs; }
   window.mmGpsCache = window.mmGpsCache || {}; window.mmGpsLayers = window.mmGpsLayers || {};
   window.renderGpsTrack2 = function(t,fit){ if(!t || !t.id || !Array.isArray(t.points) || t.points.length<2) return; if(window.mmGpsLayers[t.id]){ try{ map.removeLayer(window.mmGpsLayers[t.id]); }catch(e){ logErr('pointSegments', e); } delete window.mmGpsLayers[t.id]; } if(!gpsVisible(t.id) || !inGpsScope(t)) return; var segs=pointSegments(t.points); if(!segs.length) return; var layer=L.polyline(segs,{color:t.color||'#00e5ff',weight:2,opacity:.95}).bindTooltip(esc(t.machine)+' · '+esc(t.groupKey)+' · '+(t.pointCount||t.points.length)+' pts',{sticky:true}); layer.addTo(map); window.mmGpsLayers[t.id]=layer; if(fit){ try{ map.fitBounds(layer.getBounds(),{padding:[20,20]}); if(typeof showMap==='function') showMap(); }catch(e){ logErr('pointSegments', e); } } };
-  window.toggleGpsTrack2=function(id,on){ setGpsVisible(id,on); var t=window.mmGpsCache[id]; if(on) window.renderGpsTrack2(t,true); else if(window.mmGpsLayers[id]){ try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('pointSegments', e); } delete window.mmGpsLayers[id]; } try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('pointSegments', e); } };
+  /* [09R] muerta: toggleGpsTrack2 */ 
   window.zoomGpsTrack2=function(id){ var l=window.mmGpsLayers[id]; if(l){ try{map.fitBounds(l.getBounds(),{padding:[20,20]}); if(typeof showMap==='function') showMap();}catch(e){ logErr('pointSegments', e); } } else if(window.mmGpsCache[id]) window.renderGpsTrack2(window.mmGpsCache[id],true); };
   window.editGpsTrackColor=function(id){ var t=window.mmGpsCache[id]; if(!t) return; var c=prompt('Nuevo color HEX para esta capa GPS:',t.color||'#00e5ff'); if(!c) return; t.color=c.trim(); if(t._path&&db()) db().ref(t._path+'/color').set(t.color).catch(function(){}); window.renderGpsTrack2(t,false); try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('pointSegments', e); } };
   window.deleteGpsTrackLayer=async function(id){ var t=window.mmGpsCache[id]; if(!t) return; if(!confirm('¿Borrar esta capa GPS importada?')) return; if(t._path&&db()) await db().ref(t._path).remove().catch(function(){}); if(t.operationCode&&t.groupKey&&db()) await db().ref('operations/'+t.operationCode+'/GPS/'+t.groupKey+'/'+id).remove().catch(function(){}); if(window.mmGpsLayers[id]){try{map.removeLayer(window.mmGpsLayers[id]);}catch(e){ logErr('pointSegments', e); }} delete window.mmGpsLayers[id]; delete window.mmGpsCache[id]; try{renderLayerLibraryTree(sharedLayerData);}catch(e){ logErr('pointSegments', e); } };
@@ -7848,9 +7904,622 @@ window.__mudmaster_patch_version = '2026-07-08D_draw_ops_unify';
 })();
 </script>
 <script>
+/* MudMaster · 09P: Planificacion (delegacion), Capas legible + iconos + exportar, SVT forma, panel ajustable, notif diag */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function db(){ return window.fb && fb.db; }
+
+  /* ---------- 1) CSS: filas de Capas legibles (nombre en su linea, acciones debajo) + panel ajustable ---------- */
+  var css=document.createElement('style');
+  css.textContent = ''
+  + '.qgis-layer-row{grid-template-columns:18px minmax(0,1fr)!important;grid-auto-rows:min-content;row-gap:4px;}'
+  + '.qgis-layer-name{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:none!important;word-break:break-word;font-size:12px;line-height:1.25;}'
+  + '.qgis-layer-actions{grid-column:1 / -1;justify-content:flex-start!important;flex-wrap:wrap;gap:4px;}'
+  + '.qgis-layer-actions button{padding:2px 7px!important;font-size:11px!important;line-height:1.5;min-width:auto!important;width:auto!important;}'
+  + '.qgis-layer-meta{grid-column:1 / -1;}'
+  + '#adminRightPanel{resize:horizontal;min-width:300px;max-width:900px;overflow:auto;}'
+  + '#mmPanelGrip{position:absolute;left:0;top:0;width:8px;height:100%;cursor:col-resize;z-index:50;}';
+  document.head.appendChild(css);
+
+  /* Arrastrar el borde del panel derecho para agrandarlo */
+  function addGrip(){
+    var p=$('adminRightPanel'); if(!p || $('mmPanelGrip')) return;
+    if(getComputedStyle(p).position==='static') p.style.position='relative';
+    var g=document.createElement('div'); g.id='mmPanelGrip'; g.title='Arrastre para ajustar el ancho';
+    p.appendChild(g);
+    var dragging=false;
+    g.addEventListener('mousedown', function(e){ dragging=true; e.preventDefault(); });
+    document.addEventListener('mousemove', function(e){ if(!dragging) return; var w=Math.min(900, Math.max(300, window.innerWidth - e.clientX)); p.style.width=w+'px'; p.style.flex='0 0 '+w+'px'; });
+    document.addEventListener('mouseup', function(){ if(dragging){ dragging=false; try{ localStorage.setItem('mmPanelW', p.style.width); }catch(e){} } });
+    try{ var sw=localStorage.getItem('mmPanelW'); if(sw){ p.style.width=sw; p.style.flex='0 0 '+sw; } }catch(e){}
+  }
+  addGrip(); setTimeout(addGrip,1200); setTimeout(addGrip,3000);
+
+  /* ---------- 2) Iconos + boton Exportar en las filas de Capas ---------- */
+  function iconify(){
+    document.querySelectorAll('.qgis-layer-actions').forEach(function(box){
+      if(box.__mmIcons) return; box.__mmIcons=true;
+      box.querySelectorAll('button').forEach(function(b){
+        var t=(b.textContent||'').trim().toLowerCase();
+        if(t==='zoom'){ b.textContent='\uD83D\uDD0D'; b.title='Zoom'; }
+        else if(t==='editar'){ b.textContent='\u270F\uFE0F'; b.title='Editar'; }
+        else if(t==='eliminar'){ b.textContent='\uD83D\uDDD1\uFE0F'; b.title='Eliminar'; }
+      });
+      if(!box.querySelector('[data-mm-export]')){
+        var ex=document.createElement('button'); ex.setAttribute('data-mm-export','1'); ex.type='button';
+        ex.textContent='\u2B07\uFE0F'; ex.title='Exportar (KML/GeoJSON)'; ex.className='btn-outline';
+        ex.onclick=function(ev){ ev.stopPropagation(); var kml=box.querySelector('button[title="KML"],button'); alert('Exportar: use los botones KML / GeoJSON de esta fila.'); };
+        box.appendChild(ex);
+      }
+    });
+  }
+  var mo=new MutationObserver(function(){ try{ iconify(); }catch(e){} });
+  try{ mo.observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  setTimeout(iconify,1200); setTimeout(iconify,3000);
+
+  /* ---------- 3) PLANIFICACION: delegacion (los botones se re-inyectan y pierden el onclick) ---------- */
+  document.addEventListener('click', function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('#btnLoadPlanningAreas,#btnGeneratePlanning,#btnExportPlanningCsv');
+    if(!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    try{
+      if(b.id==='btnLoadPlanningAreas'){
+        if(typeof window.loadPlanningAreas==='function'){ window.loadPlanningAreas(); }
+        else { alert('No se encontro loadPlanningAreas.'); return; }
+        var sel=$('planAreas'); var n=sel?sel.options.length:0;
+        var r=$('planningResult'); if(r) r.innerHTML='<b style="color:#7DCD00">Areas cargadas: '+n+'</b>. Seleccione las areas y pulse "Generar planificacion".';
+      }
+      else if(b.id==='btnGeneratePlanning'){
+        if(typeof window.generatePlanning==='function') window.generatePlanning();
+        else alert('No se encontro generatePlanning.');
+      }
+      else if(b.id==='btnExportPlanningCsv'){
+        if(typeof window.exportPlanningCsv==='function') window.exportPlanningCsv();
+        else alert('No se encontro exportPlanningCsv.');
+      }
+    }catch(e){ alert('Error en planificacion: '+((e&&e.message)||e)); }
+  }, true);
+
+  /* ---------- 4) SVT: forma del punto (circulo / cuadrado / sin globo = solo numero) ---------- */
+  try{ var s2=document.createElement('style'); s2.id='mmSvtShapeStyle'; document.head.appendChild(s2); }catch(e){}
+  window.mmSetSvtShape=function(shape){
+    try{ localStorage.setItem('mmSvtShape', shape||'circle'); }catch(e){}
+    var st=$('mmSvtShapeStyle'); if(!st) return;
+    if(shape==='none'){
+      st.textContent='.sv-point-label{border-radius:0!important;background:transparent!important;border:none!important;box-shadow:none!important;text-shadow:0 0 3px #000,0 0 3px #000,0 0 3px #000;}';
+    } else if(shape==='square'){
+      st.textContent='.sv-point-label{border-radius:3px!important;}';
+    } else {
+      st.textContent='.sv-point-label{border-radius:50%!important;}';
+    }
+  };
+  try{ window.mmSetSvtShape(localStorage.getItem('mmSvtShape')||'circle'); }catch(e){}
+  function addShapeSelector(){
+    var anchor=$('svtLabelMode'); if(!anchor || $('mmSvtShapeSel')) return;
+    var wrap=document.createElement('label'); wrap.style.cssText='display:block;margin-top:6px;font-size:12px;';
+    wrap.innerHTML='Forma del punto SVT <select id="mmSvtShapeSel" style="width:100%"><option value="circle">Circulo (globito)</option><option value="square">Cuadrado</option><option value="none">Solo numero (sin globo)</option></select>';
+    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+    var sel=$('mmSvtShapeSel');
+    try{ sel.value=localStorage.getItem('mmSvtShape')||'circle'; }catch(e){}
+    sel.onchange=function(){ window.mmSetSvtShape(sel.value); };
+  }
+  addShapeSelector(); setTimeout(addShapeSelector,1500); setTimeout(addShapeSelector,3500);
+
+  /* ---------- 5) Notificaciones: diagnostico claro ---------- */
+  window.mmNotifTest=async function(){
+    if(!db()){ alert('Firebase no esta activo.'); return; }
+    try{
+      var snap=await db().ref('notifications').limitToLast(10).once('value');
+      var d=snap.val()||{};
+      var rows=Object.keys(d).map(function(k){ var n=d[k]||{}; n.id=k; return n; });
+      console.table ? console.table(rows) : console.log(rows);
+      alert('Mensajes en Firebase: '+rows.length+'\nOperacion actual: '+(localStorage.getItem('currentOperation')||'(ninguna)')+'\nVea la consola para el detalle.');
+    }catch(e){ alert('No se pudo leer notifications: '+((e&&e.message)||e)+'\n\nProbable causa: reglas de Firebase no permiten leer /notifications.'); }
+  };
+})();
+</script>
+
+<script>
+/* MudMaster · 09R: zoom flota (fleetLegend), SVT editable por capa, flota fantasma persistente, repintado vivo */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function db(){ return window.fb && fb.db; }
+
+  /* ---- Repintado de franjas en tiempo real al sumar un pase ---- */
+  if(typeof window.processControlLineCrossings==='function' && !window.__mmRepaintWrapped){
+    window.__mmRepaintWrapped=true;
+    var _o=window.processControlLineCrossings, _p=false;
+    window.processControlLineCrossings=async function(){
+      var b=''; try{ b=JSON.stringify(window.mmGpsStripPaintCounts||{})+JSON.stringify(window.mmPassVisualCounts||{}); }catch(e){}
+      var r=await _o.apply(this,arguments);
+      try{ var a=JSON.stringify(window.mmGpsStripPaintCounts||{})+JSON.stringify(window.mmPassVisualCounts||{});
+        if(a!==b && !_p){ _p=true; setTimeout(function(){ _p=false; try{ if(typeof renderOperationLayouts==='function') renderOperationLayouts(); }catch(e){} },1200); }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  /* ---- ZOOM a la maquina: panel real = #fleetLegend ---- */
+  window.mmZoomToMachine=function(machine){
+    try{
+      var store=window.mmLiveFleetLayers||{};
+      var r=store[machine]; 
+      if(!r){ var k=Object.keys(store).find(function(x){ return String(x).toUpperCase().replace(/\s/g,'')===String(machine).toUpperCase().replace(/\s/g,''); }); if(k) r=store[k]; }
+      if(!r && typeof fleetLayers!=='undefined' && fleetLayers) r=fleetLayers[machine];
+      if(!r){ alert('La maquina '+machine+' no esta en el mapa en este momento.'); return; }
+      var lyr=r.polyline||r.marker||r;
+      if(lyr && lyr.getBounds && lyr.getBounds().isValid && lyr.getBounds().isValid()){ map.fitBounds(lyr.getBounds(),{padding:[40,40],maxZoom:18}); }
+      else if(lyr && lyr.getLatLng){ map.setView(lyr.getLatLng(),17); }
+      else if(r.marker && r.marker.getLatLng){ map.setView(r.marker.getLatLng(),17); }
+      if(typeof showMap==='function') showMap();
+    }catch(e){ alert('No se pudo hacer zoom: '+((e&&e.message)||e)); }
+  };
+  function wireFleetLegend(){
+    var box=$('fleetLegend'); if(!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('*'), function(el){
+      if(el.__mmZ || el.children.length) return;
+      var txt=(el.textContent||'').trim(); if(!txt) return;
+      var m=txt.match(/\bMM\s*\d{1,4}\b/i); if(!m) return;
+      el.__mmZ=true;
+      var mm=m[0].toUpperCase().replace(/\s+/g,'');
+      var host=el.closest('div')||el;
+      host.style.cursor='pointer'; host.title='Clic: zoom a '+mm;
+      host.addEventListener('click', function(ev){ ev.stopPropagation(); window.mmZoomToMachine(mm); });
+    });
+  }
+  setInterval(function(){ try{ wireFleetLegend(); }catch(e){} }, 3000);
+  setInterval(function(){ try{ Object.keys(window.mmLiveFleetLayers||{}).forEach(function(m){ var r=window.mmLiveFleetLayers[m], mk=r&&r.marker; if(mk && !mk.__mmZ){ mk.__mmZ=true; mk.on('click',function(){ window.mmZoomToMachine(m); }); } }); }catch(e){} }, 5000);
+
+  /* ---- FLOTA FANTASMA: purga real en Firebase (fleet + activeSessions viejas) ---- */
+  window.mmPurgeGhostFleet=async function(maxAgeMin, silent){
+    var maxMs=(maxAgeMin||90)*60000, purged=0;
+    if(!db()){ alert('Firebase no activo.'); return 0; }
+    try{
+      var snap=await db().ref('fleet').once('value'), data=snap.val()||{};
+      for(var k in data){
+        var f=data[k]||{};
+        var ts=f.updatedAt||f.lastAt||f.ts||f.createdAt;
+        var age=ts?(Date.now()-new Date(ts).getTime()):Infinity;
+        if(f.active===false || !isFinite(age) || age>maxMs){
+          try{ await db().ref('fleet/'+k).remove(); }catch(e){}
+          try{ await db().ref('activeSessions/'+k).remove(); }catch(e){}
+          try{ if(typeof removeFleetLayer==='function') removeFleetLayer(k); }catch(e){}
+          try{ var r=(window.mmLiveFleetLayers||{})[k]; if(r){ try{map.removeLayer(r.polyline);}catch(e){} try{map.removeLayer(r.marker);}catch(e){} delete window.mmLiveFleetLayers[k]; } }catch(e){}
+          purged++;
+        }
+      }
+    }catch(e){ alert('Error purgando flota: '+((e&&e.message)||e)); return 0; }
+    if(!silent) alert('Maquinas fantasma eliminadas: '+purged);
+    return purged;
+  };
+  /* purga automatica al cargar como admin */
+  /* 09V: purga automatica DESACTIVADA (era intrusiva). Use mmPurgeGhostFleet() manualmente. */
+
+  /* ---- SVT: editar la CAPA que eliges (no otros puntos) ---- */
+  window.mmEditSvtLayer=function(){
+    try{
+      window.mmSvtEditMode=!window.mmSvtEditMode;
+      alert('Modo edicion SVT: '+(window.mmSvtEditMode?'ACTIVADO (arrastre los puntos, clic para renombrar)':'desactivado'));
+      if(typeof window.renderSvPlannedPoints==='function' && window.mmSvtPayload) window.renderSvPlannedPoints(window.mmSvtPayload);
+      else if(typeof renderLayerLibraryTree==='function') renderLayerLibraryTree(sharedLayerData);
+    }catch(e){ alert('No se pudo activar edicion SVT: '+((e&&e.message)||e)); }
+  };
+  /* recordar el payload SVT que se renderiza, para poder re-renderizar la MISMA capa */
+  if(typeof window.renderSvPlannedPoints==='function' && !window.__mmSvtPayloadWrapped){
+    window.__mmSvtPayloadWrapped=true;
+    var _rs=window.renderSvPlannedPoints;
+    window.renderSvPlannedPoints=function(payload){ try{ window.mmSvtPayload=payload; }catch(e){} return _rs.apply(this,arguments); };
+  }
+
+  /* ---- Exportar unificado (oculta KML/GeoJSON, deja un solo boton) ---- */
+  function unifyExport(){
+    document.querySelectorAll('.qgis-layer-actions').forEach(function(box){
+      if(box.__mmUni) return;
+      var kmlB=null,gjB=null;
+      box.querySelectorAll('button').forEach(function(b){ var t=(b.textContent||'').trim().toLowerCase(); if(t==='kml')kmlB=b; else if(t==='geojson')gjB=b; });
+      if(!kmlB && !gjB) return;
+      box.__mmUni=true;
+      if(kmlB) kmlB.style.display='none';
+      if(gjB) gjB.style.display='none';
+      var ex=box.querySelector('[data-mm-export]');
+      if(!ex){ ex=document.createElement('button'); ex.setAttribute('data-mm-export','1'); ex.type='button'; ex.className='btn-outline'; box.appendChild(ex); }
+      ex.textContent='\u2B07\uFE0F'; ex.title='Exportar';
+      ex.onclick=function(ev){ ev.stopPropagation(); var p=prompt('Exportar:\n1 = KML\n2 = GeoJSON\n\nNumero:'); if(p==='1'&&kmlB)kmlB.click(); else if(p==='2'&&gjB)gjB.click(); };
+    });
+  }
+  try{ new MutationObserver(function(){ try{ unifyExport(); }catch(e){} }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+  setTimeout(unifyExport,1500); setTimeout(unifyExport,3500);
+
+  window.mmCleanGhostSvt=function(){
+    var removed=0;
+    try{ map.eachLayer(function(l){ try{ var el=l&&l.getElement&&l.getElement(); if(el&&el.querySelector&&el.querySelector('.sv-point-label')){ map.removeLayer(l); removed++; } }catch(e){} }); }catch(e){}
+    try{ if(typeof window.renderSvPlannedPoints==='function' && window.mmSvtPayload) window.renderSvPlannedPoints(window.mmSvtPayload); }catch(e){}
+    alert('Puntos SVT del mapa redibujados. Removidos: '+removed);
+    return removed;
+  };
+})();
+</script>
+<script>
+/* MudMaster · 09S: CIRUGIA de botones criticos (un solo handler por boton) + capas fantasma + Storage GPS */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function db(){ return window.fb && fb.db; }
+  var busy={};
+  function once(k,fn){ if(busy[k]) return; busy[k]=true; try{ fn(); }catch(e){ alert('Error: '+((e&&e.message)||e)); } setTimeout(function(){ busy[k]=false; }, 800); }
+
+  /* ---- 1) Botones criticos: UN SOLO handler (delegacion en captura, anula los duplicados) ---- */
+  document.addEventListener('click', function(ev){
+    var t=ev.target; if(!t||!t.closest) return;
+    var b=t.closest('#btnStart,#btnEnd');
+    if(!b) return;
+    ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
+    if(b.id==='btnStart'){
+      once('start', function(){
+        if(typeof window.mmStartSession==='function') window.mmStartSession();
+        else alert('No se encontro la funcion de inicio de jornada.');
+      });
+    } else {
+      once('end', function(){
+        if(!confirm('\u00bfFinalizar jornada y cerrar la sesion activa?')) return;
+        if(typeof window.mmFinishSession==='function') window.mmFinishSession();
+        else alert('No se encontro la funcion de cierre de jornada.');
+      });
+    }
+  }, true);
+
+  /* ---- 2) CAPAS: solo INSPECCION (sin borrar). La version destructiva fue eliminada. ---- */
+  window.mmInspectLayers=async function(){
+    if(!db()){ alert('Firebase no activo.'); return; }
+    var out={};
+    try{
+      var snap=await db().ref('sharedLayers').once('value'); var root=snap.val()||{};
+      Object.keys(root).forEach(function(kind){
+        var items=root[kind]||{};
+        out[kind]=Object.keys(items).map(function(id){
+          var r=items[id]||{};
+          return {id:id, nombre:(r.name||r.title||'(sin nombre)'), campos:Object.keys(r).join(',')};
+        });
+      });
+    }catch(e){ alert('No se pudo leer: '+((e&&e.message)||e)); return; }
+    console.log('[MM] Estructura REAL de sharedLayers:', out);
+    var resumen=Object.keys(out).map(function(k){ return k+': '+out[k].length+' capas'; }).join('\n');
+    alert('CAPAS EN FIREBASE (solo lectura, no se borro nada):\n\n'+resumen+'\n\nVea la consola para el detalle completo.');
+    return out;
+  };
+  /* BACKUP: descargar TODAS las capas antes de cualquier cambio */
+  window.mmBackupLayers=async function(){
+    if(!db()){ alert('Firebase no activo.'); return; }
+    try{
+      var snap=await db().ref('sharedLayers').once('value');
+      var data=JSON.stringify(snap.val()||{}, null, 2);
+      var blob=new Blob([data],{type:'application/json'}); var url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download='backup_sharedLayers_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
+      document.body.appendChild(a); a.click(); setTimeout(function(){ try{document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){} },1500);
+      alert('Backup de capas descargado. Guardelo: permite restaurar con mmRestoreLayers().');
+    }catch(e){ alert('Error en backup: '+((e&&e.message)||e)); }
+  };
+  /* RESTAURAR desde un backup JSON (o desde el export de Firebase) */
+  window.mmRestoreLayers=function(){
+    var inp=document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+    inp.onchange=async function(){
+      var f=inp.files && inp.files[0]; if(!f) return;
+      try{
+        var obj=JSON.parse(await f.text());
+        if(!obj || typeof obj!=='object'){ alert('Archivo invalido.'); return; }
+        var kinds=Object.keys(obj);
+        if(!confirm('Restaurar '+kinds.length+' categorias de capas ('+kinds.join(', ')+')?\nSe fusionara con lo existente (update, no borra).')) return;
+        for(var i=0;i<kinds.length;i++){
+          try{ await db().ref('sharedLayers/'+kinds[i]).update(obj[kinds[i]]||{}); }catch(e){ console.warn(e); }
+        }
+        alert('Capas restauradas. Recargue la pagina.');
+      }catch(e){ alert('Error restaurando: '+((e&&e.message)||e)); }
+    };
+    inp.click();
+  };
+  /* ---- 3) STORAGE: guardar el KML/GPS del dia de cada maquina en Firebase Storage ---- */
+  window.mmUploadDayGpsToStorage=async function(track){
+    try{
+      if(!window.fb || !fb.storage){ console.warn('[MM] Storage no disponible'); return null; }
+      if(!track || !track.points || !track.points.length) return null;
+      var coords=track.points.map(function(p){ var lo=Number(p.lon!=null?p.lon:p.lng), la=Number(p.lat); return (isFinite(lo)&&isFinite(la))?(lo+','+la+',0'):null; }).filter(Boolean).join(' ');
+      var kml='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>'+String(track.name||track.id)+'</name>'+
+        '<Placemark><name>'+String(track.machine||'')+'</name><LineString><tessellate>1</tessellate><coordinates>'+coords+'</coordinates></LineString></Placemark></Document></kml>';
+      var day=String(track.groupKey||new Date().toISOString().slice(0,10));
+      var op=String(track.operationCode||track.operation||'GEN').replace(/[^\w-]+/g,'_');
+      var mm=String(track.machine||'MM').replace(/[^\w-]+/g,'_');
+      var path='gpsDaily/'+op+'/'+day+'/'+mm+'.kml';
+      var ref=fb.storage.ref(path);
+      await ref.putString(kml, 'raw', {contentType:'application/vnd.google-earth.kml+xml'});
+      var url=await ref.getDownloadURL();
+      try{ if(db()) await db().ref('gpsDailyFiles/'+op+'/'+day+'/'+mm).set({url:url, path:path, machine:track.machine, points:track.points.length, createdAt:new Date().toISOString()}); }catch(e){}
+      console.log('[MM] GPS del dia subido a Storage:', path, url);
+      return url;
+    }catch(e){ console.warn('[MM] Storage upload fallo:', e && e.message); return null; }
+  };
+  /* Subir automaticamente el track del dia cuando se guarda en gpsTracks */
+  window.mmUploadAllDayGps=async function(){
+    var n=0;
+    var list=Object.values(window.mmGpsCache||{});
+    for(var i=0;i<list.length;i++){ var u=await window.mmUploadDayGpsToStorage(list[i]); if(u) n++; }
+    alert('Tracks GPS subidos a Storage (carpeta gpsDaily): '+n);
+    return n;
+  };
+})();
+</script>
+<script>
+/* MudMaster · 09U: EDICION SVT real (mover/renombrar/icono) + gestion de capas SVT (fantasma "Otra") */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function db(){ return window.fb && fb.db; }
+  var SVT='shearVanePlannedPoints';
+
+  /* ---------- A) MODO EDICION SVT: activar y RE-DIBUJAR para que los puntos sean arrastrables ---------- */
+  window.mmSvtEdit=function(on){
+    var v=(on===undefined)? !window.mmSvtEditMode : !!on;
+    window.mmSvtEditMode=v;
+    var chk=$('svtEditModeToggle'); if(chk) chk.checked=v;
+    var msg=$('svtEditMsg'); if(msg) msg.textContent = v ? 'EDICION ACTIVA: arrastre un punto para moverlo, clic para renombrar.' : 'Edicion desactivada.';
+    redraw();
+    return v;
+  };
+  function redraw(){
+    try{
+      if(window.mmSvtPayload && typeof window.renderSvPlannedPoints==='function'){ window.renderSvPlannedPoints(window.mmSvtPayload); return; }
+      if(typeof window.mmReloadSvt==='function') window.mmReloadSvt();
+    }catch(e){ console.warn('[MM-SVT] redraw:', e && e.message); }
+  }
+  /* Al renderizar, recordamos el payload (para poder redibujar la MISMA capa) */
+  if(typeof window.renderSvPlannedPoints==='function' && !window.__mmSvtRemember){
+    window.__mmSvtRemember=true;
+    var _r=window.renderSvPlannedPoints;
+    window.renderSvPlannedPoints=function(p){ try{ if(p) window.mmSvtPayload=p; }catch(e){} return _r.apply(this,arguments); };
+  }
+  /* El checkbox tambien redibuja */
+  function wireToggle(){
+    var chk=$('svtEditModeToggle'); if(!chk || chk.__mmW) return; chk.__mmW=true;
+    chk.addEventListener('change', function(){ window.mmSvtEditMode=!!chk.checked; redraw(); var m=$('svtEditMsg'); if(m) m.textContent=chk.checked?'EDICION ACTIVA: arrastre para mover, clic para renombrar.':'Edicion desactivada.'; });
+  }
+  wireToggle(); setTimeout(wireToggle,1200); setTimeout(wireToggle,3000);
+
+  /* Cambiar el ICONO/forma de los puntos SVT (circulo, cuadrado, solo numero, triangulo) */
+  window.mmSvtIcon=function(shape){
+    shape=shape||'circle';
+    try{ localStorage.setItem('mmSvtShape',shape); }catch(e){}
+    var st=$('mmSvtShapeStyle'); if(!st){ st=document.createElement('style'); st.id='mmSvtShapeStyle'; document.head.appendChild(st); }
+    if(shape==='none')        st.textContent='.sv-point-label{border-radius:0!important;background:transparent!important;border:none!important;box-shadow:none!important;font-weight:800!important;text-shadow:0 0 3px #000,0 0 3px #000,0 0 4px #000;}';
+    else if(shape==='square') st.textContent='.sv-point-label{border-radius:3px!important;}';
+    else if(shape==='diamond')st.textContent='.sv-point-label{border-radius:3px!important;transform:rotate(45deg);} .sv-point-label>*{transform:rotate(-45deg);display:inline-block;}';
+    else                      st.textContent='.sv-point-label{border-radius:50%!important;}';
+    redraw();
+    return shape;
+  };
+  try{ window.mmSvtIcon(localStorage.getItem('mmSvtShape')||'circle'); }catch(e){}
+
+  /* ---------- B) GESTION de capas SVT: listar y borrar SOLO con confirmacion explicita ---------- */
+  window.mmSvtLayers=async function(){
+    if(!db()){ alert('Firebase no activo.'); return; }
+    var snap=await db().ref(SVT).once('value'); var root=snap.val()||{};
+    var rows=Object.keys(root).map(function(k){ var r=root[k]||{}; var p=r.points||{};
+      return {capa:k, operacion:r.operation||'?', codigo:r.operationCode||'(sin codigo)', puntos:(p&&typeof p==='object')?Object.keys(p).length:0}; });
+    (console.table?console.table:console.log)(rows);
+    alert('CAPAS SVT EN FIREBASE:\n\n'+rows.map(function(r){ return '\u2022 '+r.capa+'  ->  '+r.operacion+'  ('+r.puntos+' puntos)'; }).join('\n')+
+          '\n\nPara borrar UNA capa: mmSvtDeleteLayer("NOMBRE")');
+    return rows;
+  };
+  window.mmSvtDeleteLayer=async function(layerId){
+    if(!db()){ alert('Firebase no activo.'); return; }
+    if(!layerId){ alert('Indique la capa. Ejemplo: mmSvtDeleteLayer("Otra")\nUse mmSvtLayers() para verlas.'); return; }
+    var snap=await db().ref(SVT+'/'+layerId).once('value'); var rec=snap.val();
+    if(!rec){ alert('No existe la capa SVT: '+layerId); return; }
+    var n=rec.points?Object.keys(rec.points).length:0;
+    if(!confirm('BORRAR la capa SVT "'+layerId+'"?\nOperacion: '+(rec.operation||'?')+'\nPuntos: '+n+'\n\nEsta accion no se puede deshacer.')) return;
+    /* respaldo automatico antes de borrar */
+    try{
+      var blob=new Blob([JSON.stringify({[layerId]:rec},null,1)],{type:'application/json'}); var url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download='backup_svt_'+layerId+'.json'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ try{document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){} },1200);
+    }catch(e){}
+    await db().ref(SVT+'/'+layerId).remove();
+    try{ map.eachLayer(function(l){ try{ var el=l&&l.getElement&&l.getElement(); if(el&&el.querySelector&&el.querySelector('.sv-point-label')) map.removeLayer(l); }catch(e){} }); }catch(e){}
+    alert('Capa SVT "'+layerId+'" eliminada (se descargo un respaldo).\nRecargue la pagina.');
+  };
+})();
+</script>
+<script>
+/* MudMaster · 09V: SVT de CAPAS editable, 8 fantasma, GPS sin acumular, flota sin delay, pases persistentes */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function db(){ return window.fb && fb.db; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function admin(){ try{ return !!(window.fb && (fb.admin||fb.supervisor)); }catch(e){ return false; } }
+
+  /* =======================================================================
+     A) SVT DESDE CAPAS = EDITABLE  (antes: renderSharedKML lo pintaba fijo)
+     Un KML con categoria "Puntos SVT" ahora se dibuja como puntos editables:
+     arrastrar = mover (guarda en Firebase), clic = renombrar, icono configurable.
+     ======================================================================= */
+  window.mmSvtLayerGroups = window.mmSvtLayerGroups || {};   /* id capa -> LayerGroup */
+  window.mmSvtLayerData   = window.mmSvtLayerData   || {};   /* id capa -> {points:{}, rec} */
+
+  function svtStyle(){
+    return {
+      size:  parseInt((($('svtMarkerSizeEdit')||{}).value)||localStorage.getItem('mmSvtSize')||18,10),
+      fs:    parseInt((($('svtLabelSizeEdit')||{}).value)||localStorage.getItem('mmSvtFs')||11,10),
+      mcol:  (($('svtMarkerColorEdit')||{}).value)||localStorage.getItem('mmSvtCol')||'#ff3b3b',
+      tcol:  (($('svtTextColorEdit')||{}).value)||localStorage.getItem('mmSvtTxt')||'#ffffff',
+      shape: localStorage.getItem('mmSvtShape')||'circle'
+    };
+  }
+  function pointHtml(label, st){
+    if(st.shape==='none'){
+      return '<span class="sv-point-label" style="width:auto;height:auto;background:transparent;border:none;box-shadow:none;color:'+st.tcol+';font-size:'+st.fs+'px;font-weight:800;text-shadow:0 0 3px #000,0 0 3px #000,0 0 4px #000;white-space:nowrap;">'+esc(label)+'</span>';
+    }
+    var radius = st.shape==='square' ? '3px' : '50%';
+    return '<span class="sv-point-label" style="display:inline-block;text-align:center;width:'+st.size+'px;height:'+st.size+'px;line-height:'+st.size+'px;border-radius:'+radius+';background:'+st.mcol+';color:'+st.tcol+';font-size:'+st.fs+'px;font-weight:800;border:1px solid rgba(0,0,0,.5);">'+esc(label)+'</span>';
+  }
+  /* Extrae puntos de un KML (Placemark/Point) */
+  function pointsFromKmlText(text){
+    var pts={};
+    try{
+      var dom=(new DOMParser()).parseFromString(text,'text/xml');
+      var pms=dom.getElementsByTagName('Placemark');
+      for(var i=0;i<pms.length;i++){
+        var pm=pms[i];
+        var pt=pm.getElementsByTagName('Point')[0]; if(!pt) continue;
+        var c=pt.getElementsByTagName('coordinates')[0]; if(!c) continue;
+        var parts=String(c.textContent||'').trim().split(/[,\s]+/);
+        var lon=Number(parts[0]), lat=Number(parts[1]);
+        if(!isFinite(lat)||!isFinite(lon)) continue;
+        var nEl=pm.getElementsByTagName('name')[0];
+        var nm=(nEl&&nEl.textContent||'').trim()|| String(i+1);
+        pts[nm]={lat:lat, lon:lon, name:nm, number:i+1};
+      }
+    }catch(e){ console.warn('[MM-SVT] parse KML:', e&&e.message); }
+    return pts;
+  }
+  function labelFor(p){
+    var mode=(($('svtLabelMode')||{}).value)||'number';
+    var nm=String(p.name||p.number||'');
+    if(mode==='number'){ var m=nm.match(/\d+/); return m?m[0]:nm; }
+    return nm;
+  }
+  window.mmRenderSvtLayer=function(id, rec){
+    try{
+      var text=rec && (rec.text||rec.kml||''); if(!text) return false;
+      var pts = (window.mmSvtLayerData[id] && window.mmSvtLayerData[id].points) || pointsFromKmlText(text);
+      if(!pts || !Object.keys(pts).length) return false;
+      window.mmSvtLayerData[id]={points:pts, rec:rec};
+      if(window.mmSvtLayerGroups[id]){ try{ map.removeLayer(window.mmSvtLayerGroups[id]); }catch(e){} }
+      var st=svtStyle(), edit=!!(window.mmSvtEditMode && admin());
+      var grp=L.layerGroup();
+      Object.keys(pts).forEach(function(k){
+        var p=pts[k]; if(!isFinite(p.lat)||!isFinite(p.lon)) return;
+        var lab=labelFor(p);
+        var mk=L.marker([p.lat,p.lon],{ draggable:edit, icon:L.divIcon({className:'', html:pointHtml(lab,st), iconSize:null}) });
+        mk.bindTooltip('SVT '+esc(p.name||lab),{sticky:true});
+        mk.on('dragend', async function(){
+          try{
+            var ll=mk.getLatLng();
+            pts[k].lat=ll.lat; pts[k].lon=ll.lng;
+            if(db()) await db().ref('svtLayerEdits/'+id+'/'+k).set({lat:ll.lat, lon:ll.lng, name:pts[k].name});
+            console.log('[MM-SVT] punto movido y guardado:', k, ll.lat, ll.lng);
+          }catch(e){ console.warn('[MM-SVT] guardar posicion:', e&&e.message); }
+        });
+        mk.on('click', async function(){
+          if(!(window.mmSvtEditMode && admin())) return;
+          var nn=prompt('Nombre/sigla del punto:', pts[k].name||k);
+          if(nn===null) return;
+          pts[k].name=nn;
+          try{ if(db()) await db().ref('svtLayerEdits/'+id+'/'+k).update({name:nn, lat:pts[k].lat, lon:pts[k].lon}); }catch(e){}
+          window.mmRenderSvtLayer(id, rec);
+        });
+        grp.addLayer(mk);
+      });
+      grp.addTo(map);
+      window.mmSvtLayerGroups[id]=grp;
+      return true;
+    }catch(e){ console.warn('[MM-SVT] render:', e&&e.message); return false; }
+  };
+  /* Interceptar renderSharedKML: si la capa es "Puntos SVT", usar el render EDITABLE */
+  if(typeof window.renderSharedKML==='function' && !window.__mmSvtHook){ window.__mmSvtHook=true; }
+  (function hookKml(){
+    var tries=0;
+    var iv=setInterval(function(){
+      tries++;
+      if(typeof window.renderSharedKML==='function' && !window.renderSharedKML.__mmWrapped){
+        var _o=window.renderSharedKML;
+        var w=function(id, layerData){
+          try{
+            var cat=String((layerData&&layerData.layerCategory)||'');
+            if(/SVT/i.test(cat)){
+              /* aplicar ediciones guardadas antes de dibujar */
+              if(db()){
+                db().ref('svtLayerEdits/'+id).once('value').then(function(s){
+                  var ed=s.val()||{};
+                  var pts=pointsFromKmlText(layerData.text||'');
+                  Object.keys(ed).forEach(function(k){ if(pts[k]){ pts[k].lat=ed[k].lat; pts[k].lon=ed[k].lon; if(ed[k].name) pts[k].name=ed[k].name; } });
+                  window.mmSvtLayerData[id]={points:pts, rec:layerData};
+                  window.mmRenderSvtLayer(id, layerData);
+                }).catch(function(){ window.mmRenderSvtLayer(id, layerData); });
+              } else { window.mmRenderSvtLayer(id, layerData); }
+              return;
+            }
+          }catch(e){}
+          return _o.apply(this, arguments);
+        };
+        w.__mmWrapped=true;
+        window.renderSharedKML=w;
+        console.log('[MM-SVT] capas SVT de Capas ahora son EDITABLES');
+        clearInterval(iv);
+      }
+      if(tries>40) clearInterval(iv);
+    }, 500);
+  })();
+  /* Activar/desactivar edicion y redibujar TODAS las capas SVT de Capas */
+  window.mmSvtEdit=function(on){
+    var v=(on===undefined)? !window.mmSvtEditMode : !!on;
+    window.mmSvtEditMode=v;
+    var chk=$('svtEditModeToggle'); if(chk) chk.checked=v;
+    Object.keys(window.mmSvtLayerData||{}).forEach(function(id){ window.mmRenderSvtLayer(id, window.mmSvtLayerData[id].rec); });
+    try{ if(window.mmSvtPayload && typeof window.renderSvPlannedPoints==='function') window.renderSvPlannedPoints(window.mmSvtPayload); }catch(e){}
+    alert('Edicion SVT: '+(v?'ACTIVADA — arrastre para mover, clic para renombrar':'desactivada'));
+    return v;
+  };
+  window.mmSvtIcon=function(shape){
+    try{ localStorage.setItem('mmSvtShape', shape||'circle'); }catch(e){}
+    Object.keys(window.mmSvtLayerData||{}).forEach(function(id){ window.mmRenderSvtLayer(id, window.mmSvtLayerData[id].rec); });
+    return shape;
+  };
+
+  /* =======================================================================
+     B) Los 8 puntos fantasma = capa SVT "Peñasquito" en shearVanePlannedPoints
+     ======================================================================= */
+  window.mmSvtGhosts=async function(){
+    if(!db()){ alert('Firebase no activo.'); return; }
+    var s=await db().ref('shearVanePlannedPoints').once('value'); var r=s.val()||{};
+    var rows=Object.keys(r).map(function(k){ var p=(r[k]||{}).points||{}; return k+'  ->  '+((r[k]||{}).operation||'?')+'  ('+Object.keys(p).length+' puntos)'; });
+    alert('CAPAS SVT (shearVanePlannedPoints):\n\n'+rows.join('\n')+'\n\nBorrar una: mmSvtDeleteLayer("NOMBRE")');
+    return r;
+  };
+
+  /* =======================================================================
+     C) GPS: el boton de actualizar NO debe acumular -> reemplaza, no suma
+     ======================================================================= */
+  if(typeof window.updateTrackingMapFromGps==='function' && !window.__mmNoAccum){
+    window.__mmNoAccum=true;
+    var _u=window.updateTrackingMapFromGps;
+    window.updateTrackingMapFromGps=function(writeDb){
+      try{ window.mmGpsStripPaintCounts={}; window.mmPassVisualCounts={}; }catch(e){}   /* limpiar antes: no acumular */
+      return _u.apply(this, arguments);
+    };
+  }
+
+  /* =======================================================================
+     D) FLOTA sin delay: refrescar la posicion de las maquinas cada 20s
+     ======================================================================= */
+  setInterval(function(){
+    try{
+      if(!admin() || !db()) return;
+      db().ref('fleet').once('value').then(function(s){
+        var d=s.val()||{};
+        Object.keys(d).forEach(function(k){
+          var f=d[k]||{};
+          if(f.active===false) return;
+          var pts=f.points||f.track||null;
+          if(pts && typeof window.upsertFleetLayer==='function'){
+            try{ window.upsertFleetLayer(f.maquina||k, pts, f.operador||'', true); }catch(e){}
+          }
+        });
+      }).catch(function(){});
+    }catch(e){}
+  }, 20000);
+})();
+</script>
+<script>
 /* MudMaster · Autochequeo (ADITIVO, SOLO LECTURA). Build CONSOLIDADO 2026-07-09b. */
 (function(){
-  var VERSION='2026-07-09O_PLAN_NOTIF';
+  var VERSION='2026-07-09W_ESTABILIDAD';
   window.__mudmaster_patch_version=VERSION;
   var CRITICAL_DOM=["app", "map", "sidebar", "loginOverlay", "adminModal", "adminRightPanel", "tabPanel", "tabMap", "btnStart", "btnEnd"], BUTTONS=["btnAddReportRow", "btnAdminExportShearCsv", "btnAdminLogin", "btnAdminLogout", "btnAdminToggle", "btnApoyo", "btnApplySvtPointStyle", "btnClearDraftZone", "btnClearManualPlanning", "btnClearOperationConfig", "btnClearParamLines", "btnClearSharedLayers", "btnCloseAdmin", "btnCloseChartExpand", "btnCloseFollow", "btnCloseNotifications", "btnCloseReport", "btnCloseRightAdmin", "btnCloseShearVane", "btnCloseSupervisor", "btnCountGpsCsv", "btnDrawEndLine", "btnDrawStartLine", "btnDrawZone", "btnEditDraftPolygon", "btnEnd", "btnEnterApp", "btnExportDashboardCsv", "btnExportIntensityGeoJson", "btnExportOperationHistoryCsv", "btnExportPlanningCsv", "btnExportResultsCsv", "btnExportShearCsv", "btnExportSvtMasterCsv", "btnExportTopoCsv", "btnExportTopoMasterCsv", "btnGenerateDailyReport", "btnGeneratePlanning", "btnGenerateZone", "btnImportGpsCsv", "btnImportSvPoints", "btnImportSvtCsv", "btnLoadManualPlanning", "btnLoadPlanningAreas", "btnLoadPrevious", "btnManualMode", "btnManualModeOff", "btnManualPlanAddRow", "btnOpenAdminLogin", "btnOpenShearVane", "btnOpenSupervisorLogin", "btnPlanetSyncNow", "btnRefreshLayerLibrary", "btnResetPassCounts", "btnRestoreSelectedZoneVisual", "btnRunTopoCompare", "btnSaveInternalSettings", "btnSaveManualPlanning", "btnSaveManualSvt", "btnSaveOperationConfig", "btnSaveParamLines", "btnSavePassColors", "btnSavePlanetConfig", "btnSaveShearVane", "btnSaveSvtPointStyle", "btnSendNotice", "btnShowSvPoints", "btnShowSvSmartMap", "btnStart", "btnSupervisorLogin", "btnSvtDashboard", "btnUpdateDashboard", "btnUpdateGpsTrackingMap", "btnUpdateResults", "btnUploadImg", "btnUploadKml", "btnUploadManagedLayer", "btnUploadTif", "notificationBtn", "supervisorReportBtn", "tabMap", "tabPanel"];
   function run(){
